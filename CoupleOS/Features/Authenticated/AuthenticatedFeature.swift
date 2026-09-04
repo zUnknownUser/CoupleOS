@@ -18,11 +18,20 @@ nonisolated struct AuthenticatedFeature {
         var coupleRequestID: UUID?
         var observationID: UUID?
         var isSigningOut = false
-        var errorMessage: String?
+        var signOutError: AuthenticationError?
+        /// Held here only so the device record the backend reads can follow a
+        /// change. Nothing on screen reads it — views take their words from
+        /// the environment.
+        var language: AppLanguage
 
-        init(session: Session, couple: Couple? = nil) {
+        init(
+            session: Session,
+            couple: Couple? = nil,
+            language: AppLanguage = .english
+        ) {
             self.session = session
             self.couple = couple.map(CoupleState.connected) ?? .loading
+            self.language = language
         }
 
         /// The Home, merged from every area that had something to say.
@@ -32,13 +41,13 @@ nonisolated struct AuthenticatedFeature {
         /// `now` is a parameter rather than a call to `Date()` inside because
         /// staleness depends on it, and a Home that cannot be asked "what did
         /// you look like last Tuesday" cannot be tested.
-        func composition(now: Date = Date()) -> HomeComposition {
+        func composition(strings: Strings, now: Date = Date()) -> HomeComposition {
             let partnerName = home.partnerName
             return HomeComposition([
-                market.homeContribution(partnerName: partnerName, now: now),
-                chores.homeContribution(partnerName: partnerName, now: now),
-                decisions.homeContribution(partnerName: partnerName),
-                home.homeContribution(partnerName: partnerName),
+                market.homeContribution(strings: strings, partnerName: partnerName, now: now),
+                chores.homeContribution(strings: strings, partnerName: partnerName, now: now),
+                decisions.homeContribution(strings: strings, partnerName: partnerName),
+                home.homeContribution(strings: strings, partnerName: partnerName),
             ])
         }
     }
@@ -56,12 +65,13 @@ nonisolated struct AuthenticatedFeature {
     enum CoupleState: Equatable {
         case loading
         case connected(Couple)
-        case error(String)
+        case error(CoupleClientError)
     }
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
         case task
+        case languageChanged(AppLanguage)
         case openTapped(HomeSignal.Target)
         case retryTapped
         case coupleResponse(CoupleResponse)
@@ -124,18 +134,29 @@ nonisolated struct AuthenticatedFeature {
             case .binding:
                 return .none
 
+            case let .languageChanged(language):
+                guard state.language != language else { return .none }
+                state.language = language
+                return registerForNotifications(
+                    userID: state.session.user.id,
+                    language: language
+                )
+
             case let .openTapped(target):
                 return open(target, state: &state)
 
             case .task:
                 return .merge(
                     openHome(state: &state),
-                    registerForNotifications(userID: state.session.user.id)
+                    registerForNotifications(
+                        userID: state.session.user.id,
+                        language: state.language
+                    )
                 )
 
             case .retryTapped:
                 state.couple = .loading
-                state.errorMessage = nil
+                state.signOutError = nil
                 return loadCouple(state: &state)
 
             case let .coupleResponse(response):
@@ -145,9 +166,9 @@ nonisolated struct AuthenticatedFeature {
                 case let .success(couple?):
                     return connect(couple, state: &state)
                 case .success(nil):
-                    state.couple = .error(CoupleClientError.coupleNotFound.message)
+                    state.couple = .error(.coupleNotFound)
                 case let .failure(error):
-                    state.couple = .error(error.message)
+                    state.couple = .error(error)
                 }
                 return .none
 
@@ -173,7 +194,7 @@ nonisolated struct AuthenticatedFeature {
                     )))
                 case let .failure(error):
                     state.observationID = nil
-                    state.couple = .error(error.message)
+                    state.couple = .error(error)
                     return stopModules()
                 }
 
@@ -185,7 +206,7 @@ nonisolated struct AuthenticatedFeature {
                 state.isSigningOut = true
                 state.coupleRequestID = nil
                 state.observationID = nil
-                state.errorMessage = nil
+                state.signOutError = nil
                 state.route = nil
                 return .concatenate(
                     stopModules(),
@@ -216,7 +237,7 @@ nonisolated struct AuthenticatedFeature {
 
             case let .signOutResponse(.failure(error)):
                 state.isSigningOut = false
-                state.errorMessage = error.message
+                state.signOutError = error
                 return .none
 
             case .delegate:
@@ -254,12 +275,18 @@ nonisolated struct AuthenticatedFeature {
     /// Couple exists, so a notification has something to be about. A refused
     /// prompt simply ends the effect — nothing about it is user-visible, and
     /// the daily moment still works without it.
-    private func registerForNotifications(userID: String) -> Effect<Action> {
+    /// The device record carries the language so the backend can pick push
+    /// copy in it. Re-run on a language change, which is why it takes the
+    /// language rather than reading it from a client of its own.
+    private func registerForNotifications(
+        userID: String,
+        language: AppLanguage
+    ) -> Effect<Action> {
         .run { _ in
             guard await pushNotificationClient.requestAuthorization() else { return }
-            try? await pushNotificationClient.registerDevice(userID)
+            try? await pushNotificationClient.registerDevice(userID, language)
             for await _ in pushNotificationClient.tokenRefreshes() {
-                try? await pushNotificationClient.registerDevice(userID)
+                try? await pushNotificationClient.registerDevice(userID, language)
             }
         }
         .cancellable(id: CancelID.pushRegistration, cancelInFlight: true)

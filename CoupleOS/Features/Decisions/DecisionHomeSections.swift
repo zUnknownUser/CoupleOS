@@ -5,13 +5,18 @@ struct DecisionNeedsYouSection: View {
     let partnerName: String?
     let open: (String) -> Void
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         if !decisions.isEmpty {
-            DecisionHomeSection(title: "NEEDS YOU", tint: CoupleTheme.ColorToken.amber) {
+            DecisionHomeSection(
+                title: strings.decisions.needsYouSection,
+                tint: CoupleTheme.ColorToken.amber
+            ) {
                 ForEach(decisions) { decision in
                     DecisionHomeRow(
                         decision: decision,
-                        detail: "\(partnerName ?? "Your person") needs your choice",
+                        detail: strings.decisions.needsYouDetail(partnerName),
                         tint: CoupleTheme.ColorToken.amber
                     ) {
                         open(decision.id)
@@ -27,14 +32,18 @@ struct DecisionWaitingSection: View {
     let partnerName: String?
     let open: (String) -> Void
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         if !decisions.isEmpty {
-            DecisionHomeSection(title: "WAITING", tint: CoupleTheme.ColorToken.tertiaryText) {
+            DecisionHomeSection(
+                title: strings.decisions.waitingSection,
+                tint: CoupleTheme.ColorToken.tertiaryText
+            ) {
                 ForEach(decisions) { decision in
                     DecisionHomeRow(
                         decision: decision,
-                        detail: partnerName.map { "Waiting quietly for \($0) to choose" }
-                            ?? "Waiting quietly for your person",
+                        detail: strings.decisions.waitingRowDetail(partnerName),
                         tint: CoupleTheme.ColorToken.tertiaryText
                     ) {
                         open(decision.id)
@@ -49,14 +58,18 @@ struct DecisionRecentSection: View {
     let decisions: [Decision]
     let open: (String) -> Void
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         if !decisions.isEmpty {
-            DecisionHomeSection(title: "RECENT", tint: CoupleTheme.ColorToken.mint) {
+            DecisionHomeSection(
+                title: strings.decisions.recentSection,
+                tint: CoupleTheme.ColorToken.mint
+            ) {
                 ForEach(Array(decisions.prefix(3))) { decision in
                     DecisionHomeRow(
                         decision: decision,
-                        detail: decision.selectedOption.map { "You decided together · \($0)" }
-                            ?? "Decided together",
+                        detail: strings.decisions.recentDetail(decision.selectedOption),
                         tint: CoupleTheme.ColorToken.mint
                     ) {
                         open(decision.id)
@@ -68,13 +81,15 @@ struct DecisionRecentSection: View {
 }
 
 struct DecisionsRecovery: View {
-    let message: String
+    let error: DecisionClientError
     let retry: () -> Void
+
+    @Environment(\.strings) private var strings
 
     var body: some View {
         VStack(alignment: .leading, spacing: CoupleTheme.Space.small) {
-            InlineMessage(text: message, style: .error)
-            Button("Reconnect decisions", action: retry)
+            InlineMessage(text: strings.errors.decision(error), style: .error)
+            Button(strings.decisions.reconnect, action: retry)
                 .font(CoupleTheme.TypeToken.caption)
                 .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                 .frame(minHeight: CoupleTheme.Size.minimumTouchTarget)
@@ -104,6 +119,8 @@ private struct DecisionHomeRow: View {
     let detail: String
     let tint: Color
     let action: () -> Void
+
+    @Environment(\.strings) private var strings
 
     var body: some View {
         Button(action: action) {
@@ -147,20 +164,22 @@ private struct DecisionHomeRow: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(decision.title). \(detail).")
-        .accessibilityHint("Opens this decision")
+        .accessibilityHint(strings.decisions.rowHint)
     }
 }
 
 struct NewDecisionButton: View {
     let action: () -> Void
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         GlassButton(action: action) {
-            Label("New decision", systemImage: "plus")
+            Label(strings.decisions.newDecision, systemImage: "plus")
                 .font(CoupleTheme.TypeToken.button)
                 .foregroundStyle(CoupleTheme.ColorToken.pearl)
                 .frame(maxWidth: .infinity, minHeight: CoupleTheme.Size.buttonHeight)
         }
-        .accessibilityHint("Creates something for your person to choose")
+        .accessibilityHint(strings.decisions.newDecisionHint)
     }
 }

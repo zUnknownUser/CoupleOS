@@ -19,7 +19,7 @@ nonisolated struct HomeFeature {
         var dailyObservationID: UUID?
         var dailyCoupleID: String?
         var dailyCurrentUserID: String?
-        var dailyErrorMessage: String?
+        var dailyError: DailyExperienceError?
         var opensTodayWhenLoaded = false
 
         @Presents var destination: Destination.State?
@@ -34,7 +34,7 @@ nonisolated struct HomeFeature {
         case loading
         case loaded(User)
         case unavailable
-        case error(String)
+        case error(UserClientError)
     }
 
     enum Action {
@@ -100,7 +100,7 @@ nonisolated struct HomeFeature {
                 case .success(nil):
                     state.partner = .unavailable
                 case let .failure(error):
-                    state.partner = .error(error.message)
+                    state.partner = .error(error)
                 }
                 return .none
 
@@ -118,12 +118,12 @@ nonisolated struct HomeFeature {
 
             case let .destination(.presented(.today(.response(.success(experience))))):
                 state.dailyExperience = experience
-                state.dailyErrorMessage = nil
+                state.dailyError = nil
                 return .none
 
             case let .destination(.presented(.today(.experienceUpdated(experience)))):
                 state.dailyExperience = experience
-                state.dailyErrorMessage = nil
+                state.dailyError = nil
                 return .none
 
             case .destination:
@@ -194,7 +194,7 @@ nonisolated struct HomeFeature {
         state.dailyObservationID = nil
         state.dailyCoupleID = coupleID
         state.dailyCurrentUserID = currentUserID
-        state.dailyErrorMessage = nil
+        state.dailyError = nil
         state.opensTodayWhenLoaded = false
     }
 
@@ -219,7 +219,7 @@ nonisolated struct HomeFeature {
 
     private func retryDaily(state: inout State) -> Effect<Action> {
         guard let coupleID = state.dailyCoupleID else { return .none }
-        state.dailyErrorMessage = nil
+        state.dailyError = nil
 
         guard let experienceID = state.dailyExperience?.id else {
             guard state.dailyRequestID == nil else { return .none }
@@ -242,7 +242,7 @@ nonisolated struct HomeFeature {
             guard let coupleID = state.dailyCoupleID,
                   let userID = state.dailyCurrentUserID else { return .none }
             state.dailyExperience = experience
-            state.dailyErrorMessage = nil
+            state.dailyError = nil
 
             if state.opensTodayWhenLoaded {
                 state.destination = .today(TodayFeature.State(
@@ -261,7 +261,7 @@ nonisolated struct HomeFeature {
 
         case let .failure(error):
             state.opensTodayWhenLoaded = false
-            state.dailyErrorMessage = error.message
+            state.dailyError = error
             return .none
         }
     }
@@ -275,13 +275,13 @@ nonisolated struct HomeFeature {
         switch event.result {
         case let .success(experience):
             state.dailyExperience = experience
-            state.dailyErrorMessage = nil
+            state.dailyError = nil
             guard case .today = state.destination else { return .none }
             return .send(.destination(.presented(.today(.experienceUpdated(experience)))))
 
         case let .failure(error):
             state.dailyObservationID = nil
-            state.dailyErrorMessage = error.message
+            state.dailyError = error
             return .none
         }
     }
@@ -319,7 +319,7 @@ nonisolated struct HomeFeature {
     private func loadToday(coupleID: String, state: inout State) -> Effect<Action> {
         let id = uuid()
         state.dailyRequestID = id
-        state.dailyErrorMessage = nil
+        state.dailyError = nil
         return .run { send in
             do {
                 await send(.dailyResponse(DailyResponse(

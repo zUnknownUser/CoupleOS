@@ -3,6 +3,8 @@ import SwiftUI
 
 struct ReadyForPartnerPanel: View {
     let store: StoreOf<ReadyForPartnerFeature>
+
+    @Environment(\.strings) private var strings
     @State private var copied = false
 
     var body: some View {
@@ -10,24 +12,24 @@ struct ReadyForPartnerPanel: View {
             switch store.phase {
             case .preparingWorld, .readyToInvite:
                 VStack(spacing: CoupleTheme.Space.small) {
-                    Text("Preparing your world…")
+                    Text(strings.couple.preparingTitle)
                         .font(.system(.title, weight: .medium))
                         .tracking(CoupleTheme.TypeToken.displayTracking)
                         .foregroundStyle(CoupleTheme.ColorToken.pearl)
-                    Text("A private space is taking shape.")
+                    Text(strings.couple.preparingSubtitle)
                         .font(CoupleTheme.TypeToken.body)
                         .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                 }
             case let .waitingForPartner(_, invite):
                 VStack(spacing: CoupleTheme.Space.large) {
                     VStack(spacing: CoupleTheme.Space.small) {
-                        Text("Waiting for your person.")
+                        Text(strings.couple.waitingTitle)
                             .font(.system(.title, weight: .medium))
                             .tracking(CoupleTheme.TypeToken.displayTracking)
                             .foregroundStyle(CoupleTheme.ColorToken.pearl)
                             .multilineTextAlignment(.center)
                             .accessibilityAddTraits(.isHeader)
-                        Text("Your world changes when they arrive.")
+                        Text(strings.couple.waitingSubtitle)
                             .font(CoupleTheme.TypeToken.body)
                             .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                             .multilineTextAlignment(.center)
@@ -35,17 +37,17 @@ struct ReadyForPartnerPanel: View {
                     VStack(spacing: CoupleTheme.Space.small) {
                         ShareLink(
                             item: invite.url,
-                            subject: Text("A private Couple OS invite"),
-                            message: Text("Join me in our private Couple World.")
+                            subject: Text(strings.couple.shareSubject),
+                            message: Text(strings.couple.shareMessage)
                         ) {
-                            Text("Share invite")
+                            Text(strings.couple.shareInvite)
                                 .font(CoupleTheme.TypeToken.button)
                                 .frame(maxWidth: .infinity, minHeight: CoupleTheme.Size.buttonHeight)
                         }
                         .buttonStyle(.glassProminent)
                         .tint(CoupleTheme.ColorToken.accent.opacity(0.94))
                         .foregroundStyle(CoupleTheme.ColorToken.space)
-                        Button(copied ? "Link copied" : "Copy link") {
+                        Button(copied ? strings.couple.linkCopied : strings.couple.copyLink) {
                             UIPasteboard.general.url = invite.url
                             copied = true
                         }
@@ -56,28 +58,33 @@ struct ReadyForPartnerPanel: View {
                 }
             case .partnerJoined:
                 VStack(spacing: CoupleTheme.Space.small) {
-                    Text("Your world is now shared.")
+                    Text(strings.couple.sharedTitle)
                         .font(.system(.title, weight: .medium))
                         .tracking(CoupleTheme.TypeToken.displayTracking)
                         .foregroundStyle(CoupleTheme.ColorToken.pearl)
                         .multilineTextAlignment(.center)
                         .accessibilityAddTraits(.isHeader)
-                    Text("Two presences. One private place.")
+                    Text(strings.couple.sharedSubtitle)
                         .font(CoupleTheme.TypeToken.body)
                         .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                 }
-            case let .error(message):
+            case let .error(error):
                 VStack(spacing: CoupleTheme.Space.medium) {
-                    Text("Your world is still here.")
+                    Text(strings.couple.worldStillHere)
                     .font(.system(.title, weight: .medium))
                     .tracking(CoupleTheme.TypeToken.displayTracking)
                     .foregroundStyle(CoupleTheme.ColorToken.pearl)
-                    InlineMessage(text: message, style: .error)
-                    PrimaryButton(title: "Try again") { store.send(.retryTapped) }
+                    InlineMessage(
+                        text: strings.couple.preparationError(error, strings.errors),
+                        style: .error
+                    )
+                    PrimaryButton(title: strings.common.tryAgain) { store.send(.retryTapped) }
                 }
             }
-            if let message = store.signOutError { InlineMessage(text: message, style: .error) }
-            Button("Sign out") { store.send(.signOutTapped) }
+            if let error = store.signOutError {
+                InlineMessage(text: strings.errors.authentication(error), style: .error)
+            }
+            Button(strings.common.signOut) { store.send(.signOutTapped) }
                 .font(CoupleTheme.TypeToken.caption)
                 .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                 .frame(minHeight: CoupleTheme.Size.minimumTouchTarget)
@@ -97,40 +104,42 @@ struct ReadyForPartnerPanel: View {
 struct InviteAcceptancePanel: View {
     let store: StoreOf<InviteAcceptanceFeature>
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         VStack(spacing: CoupleTheme.Space.large) {
             switch store.phase {
             case .accepting:
                 VStack(spacing: CoupleTheme.Space.small) {
-                    Text("Joining your world…")
+                    Text(strings.couple.joiningTitle)
                         .font(.system(.title, weight: .medium))
                         .tracking(CoupleTheme.TypeToken.displayTracking)
                         .foregroundStyle(CoupleTheme.ColorToken.pearl)
-                    Text("Connecting both of you securely.")
+                    Text(strings.couple.joiningSubtitle)
                         .font(CoupleTheme.TypeToken.body)
                         .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                 }
             case .joined:
                 VStack(spacing: CoupleTheme.Space.small) {
-                    Text("Your world is now shared.")
+                    Text(strings.couple.sharedTitle)
                         .font(.system(.title, weight: .medium))
                         .tracking(CoupleTheme.TypeToken.displayTracking)
                         .foregroundStyle(CoupleTheme.ColorToken.pearl)
                         .multilineTextAlignment(.center)
                         .accessibilityAddTraits(.isHeader)
-                    Text("This private place belongs to both of you.")
+                    Text(strings.couple.joinedSubtitle)
                         .font(CoupleTheme.TypeToken.body)
                         .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                         .multilineTextAlignment(.center)
                 }
-            case let .error(message):
+            case let .error(error):
                 VStack(spacing: CoupleTheme.Space.medium) {
-                    Text("We couldn't join this world.")
+                    Text(strings.couple.couldNotJoinTitle)
                         .font(.system(.title, weight: .medium))
                         .tracking(CoupleTheme.TypeToken.displayTracking)
                         .foregroundStyle(CoupleTheme.ColorToken.pearl)
-                    InlineMessage(text: message, style: .error)
-                    PrimaryButton(title: "Try again") { store.send(.retryTapped) }
+                    InlineMessage(text: strings.errors.invite(error), style: .error)
+                    PrimaryButton(title: strings.common.tryAgain) { store.send(.retryTapped) }
                 }
             }
         }

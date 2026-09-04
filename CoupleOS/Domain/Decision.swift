@@ -50,7 +50,7 @@ nonisolated struct Decision: Equatable, Identifiable, Sendable {
     }
 }
 
-nonisolated enum DecisionClientError: Error, Equatable, Sendable {
+nonisolated enum DecisionClientError: Error, Equatable, Sendable, CaseIterable {
     case invalidInput
     case notFound
     case notResponder
@@ -60,25 +60,4 @@ nonisolated enum DecisionClientError: Error, Equatable, Sendable {
     case unavailable
     case invalidData
     case unknown
-
-    var message: String {
-        switch self {
-        case .invalidInput:
-            "Check the question and its choices."
-        case .notFound:
-            "This decision is no longer available."
-        case .notResponder:
-            "This decision is waiting for your person."
-        case .alreadyResolved:
-            "This decision has already been made."
-        case .networkUnavailable:
-            "You're offline. Try again when your connection returns."
-        case .permissionDenied:
-            "This decision belongs to another Couple World."
-        case .unavailable:
-            "Decisions are temporarily unavailable."
-        case .invalidData, .unknown:
-            "We couldn't open this decision. Please try again."
-        }
-    }
 }

@@ -11,6 +11,7 @@ import {
   hashInviteToken,
   INVITE_LIFETIME_MS,
   DAILY_OPTIONS,
+  DAILY_PROMPT_ID,
   DailyExperienceRecord,
   decisionDraft,
   DecisionRecord,
@@ -273,6 +274,7 @@ export async function getTodayForUser(database: Firestore, userId: string) {
     if (snapshot.exists) return snapshot.data() as DailyExperienceRecord;
     const record: DailyExperienceRecord = {
       periodKey,
+      promptId: DAILY_PROMPT_ID,
       prompt: DAILY_PROMPT,
       options: [...DAILY_OPTIONS],
       answeredUserIds: [],

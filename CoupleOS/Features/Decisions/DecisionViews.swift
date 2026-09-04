@@ -3,6 +3,8 @@ import SwiftUI
 
 struct CreateDecisionSheet: View {
     let store: StoreOf<CreateDecisionFeature>
+
+    @Environment(\.strings) private var strings
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
@@ -13,22 +15,22 @@ struct CreateDecisionSheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: CoupleTheme.Space.large) {
-                sheetHeader(eyebrow: "NEW DECISION")
+                sheetHeader(eyebrow: strings.decisions.createEyebrow)
 
                 VStack(alignment: .leading, spacing: CoupleTheme.Space.small) {
-                    Text("What do you need their choice on?")
+                    Text(strings.decisions.createTitle)
                         .font(.system(.title, weight: .medium))
                         .tracking(CoupleTheme.TypeToken.displayTracking)
                         .foregroundStyle(CoupleTheme.ColorToken.pearl)
 
-                    Text("Keep it small. One question, a few real options.")
+                    Text(strings.decisions.createSubtitle)
                         .font(CoupleTheme.TypeToken.body)
                         .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                 }
 
-                CoupleField(label: "THE DECISION") {
+                CoupleField(label: strings.decisions.decisionLabel) {
                     TextField(
-                        "What should we decide?",
+                        strings.decisions.decisionPlaceholder,
                         text: Binding(
                             get: { store.title },
                             set: { store.send(.titleChanged($0)) }
@@ -42,7 +44,7 @@ struct CreateDecisionSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: CoupleTheme.Space.small) {
-                    Eyebrow(text: "CHOICES")
+                    Eyebrow(text: strings.decisions.choicesLabel)
 
                     CoupleInputGroup {
                         ForEach(store.options.indices, id: \.self) { index in
@@ -53,7 +55,7 @@ struct CreateDecisionSheet: View {
                                     .frame(width: 18)
 
                                 TextField(
-                                    "Add a choice",
+                                    strings.decisions.choicePlaceholder,
                                     text: Binding(
                                         get: { store.options[index] },
                                         set: { store.send(.optionChanged(index: index, value: $0)) }
@@ -81,7 +83,7 @@ struct CreateDecisionSheet: View {
                                             )
                                     }
                                     .buttonStyle(.plain)
-                                    .accessibilityLabel("Remove choice \(index + 1)")
+                                    .accessibilityLabel(strings.decisions.removeChoice(index + 1))
                                 }
                             }
                             .padding(.horizontal, CoupleTheme.Space.medium)
@@ -97,7 +99,7 @@ struct CreateDecisionSheet: View {
                         Button {
                             store.send(.addOptionTapped)
                         } label: {
-                            Label("Add another choice", systemImage: "plus")
+                            Label(strings.decisions.addChoice, systemImage: "plus")
                                 .font(CoupleTheme.TypeToken.caption)
                                 .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                                 .frame(minHeight: CoupleTheme.Size.minimumTouchTarget)
@@ -106,15 +108,15 @@ struct CreateDecisionSheet: View {
                     }
                 }
 
-                if let validationMessage = store.validationMessage {
-                    FieldMessage(text: validationMessage)
+                if let validation = store.validation {
+                    FieldMessage(text: strings.decisions.validation(validation))
                 }
-                if let errorMessage = store.errorMessage {
-                    InlineMessage(text: errorMessage, style: .error)
+                if let error = store.error {
+                    InlineMessage(text: strings.errors.decision(error), style: .error)
                 }
 
                 PrimaryButton(
-                    title: "Send for their choice",
+                    title: strings.decisions.submit,
                     isEnabled: store.canSubmit,
                     isLoading: store.isSubmitting
                 ) {
@@ -136,13 +138,15 @@ struct CreateDecisionSheet: View {
             CircularGlassButton(systemImage: "xmark") {
                 store.send(.dismissTapped)
             }
-            .accessibilityLabel("Close")
+            .accessibilityLabel(strings.common.close)
         }
     }
 }
 
 struct DecisionDetailSheet: View {
     let store: StoreOf<DecisionDetailFeature>
+
+    @Environment(\.strings) private var strings
 
     var body: some View {
         VStack(alignment: .leading, spacing: CoupleTheme.Space.large) {
@@ -152,7 +156,7 @@ struct DecisionDetailSheet: View {
                 CircularGlassButton(systemImage: "xmark") {
                     store.send(.dismissTapped)
                 }
-                .accessibilityLabel("Close")
+                .accessibilityLabel(strings.common.close)
             }
 
             if let decision = store.decision {
@@ -165,8 +169,8 @@ struct DecisionDetailSheet: View {
 
             detail
 
-            if let errorMessage = store.errorMessage {
-                InlineMessage(text: errorMessage, style: .error)
+            if let error = store.error {
+                InlineMessage(text: strings.errors.decision(error), style: .error)
             }
 
             Spacer(minLength: 0)
@@ -185,16 +189,16 @@ struct DecisionDetailSheet: View {
             choices
         case .waitingForPartner:
             DecisionStateNote(
-                title: "You left this with your person.",
-                detail: "It will settle here when they choose.",
+                title: strings.decisions.leftWithPartnerTitle,
+                detail: strings.decisions.leftWithPartnerDetail,
                 tint: CoupleTheme.ColorToken.amber
             )
         case .resolved:
             resolved
         case .unavailable:
             DecisionStateNote(
-                title: "This decision isn't available.",
-                detail: "It may have changed while your world was updating.",
+                title: strings.decisions.unavailableTitle,
+                detail: strings.decisions.unavailableDetail,
                 tint: CoupleTheme.ColorToken.tertiaryText
             )
         }
@@ -215,7 +219,7 @@ struct DecisionDetailSheet: View {
             }
 
             PrimaryButton(
-                title: "Choose this",
+                title: strings.decisions.chooseThis,
                 isEnabled: store.selectedOptionIndex != nil && !store.isResolving,
                 isLoading: store.isResolving
             ) {
@@ -228,14 +232,14 @@ struct DecisionDetailSheet: View {
     private var resolved: some View {
         if let result = store.decision?.selectedOption {
             VStack(alignment: .leading, spacing: CoupleTheme.Space.small) {
-                Label("Decided together", systemImage: "checkmark.circle.fill")
+                Label(strings.decisions.decidedTogether, systemImage: "checkmark.circle.fill")
                     .font(CoupleTheme.TypeToken.caption)
                     .foregroundStyle(CoupleTheme.ColorToken.mint)
                 Text(result)
                     .font(.system(.title2, weight: .semibold))
                     .foregroundStyle(CoupleTheme.ColorToken.pearl)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("One small thing settled inside your shared world.")
+                Text(strings.decisions.resolvedNote)
                     .font(CoupleTheme.TypeToken.body)
                     .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
             }
@@ -255,10 +259,10 @@ struct DecisionDetailSheet: View {
 
     private var eyebrow: String {
         switch store.presentation {
-        case .needsMyResponse, .resolving: "NEEDS YOU"
-        case .waitingForPartner: "WAITING"
-        case .resolved: "DECIDED"
-        case .unavailable: "DECISION"
+        case .needsMyResponse, .resolving: strings.decisions.eyebrowNeedsYou
+        case .waitingForPartner: strings.decisions.eyebrowWaiting
+        case .resolved: strings.decisions.eyebrowDecided
+        case .unavailable: strings.decisions.eyebrowDecision
         }
     }
 

@@ -16,8 +16,8 @@ struct AuthenticatedView: View {
                     homeStore: store.scope(state: \.home, action: \.home)
                 )
 
-            case let .error(message):
-                HomeErrorView(message: message) {
+            case let .error(error):
+                HomeErrorView(error: error) {
                     store.send(.retryTapped)
                 }
             }
@@ -55,9 +55,10 @@ struct HomeView: View {
     @Bindable var homeStore: StoreOf<HomeFeature>
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.strings) private var strings
 
     var body: some View {
-        let composition = store.state.composition()
+        let composition = store.state.composition(strings: strings)
 
         VStack(spacing: CoupleTheme.Space.large) {
             CoupleHeader(
@@ -79,12 +80,12 @@ struct HomeView: View {
                 store.send(.openTapped($0))
             }
 
-            if let errorMessage = store.errorMessage {
-                InlineMessage(text: errorMessage, style: .error)
+            if let signOutError = store.signOutError {
+                InlineMessage(text: strings.errors.authentication(signOutError), style: .error)
             }
 
-            if case let .error(message) = store.home.partner {
-                PartnerRecovery(message: message) {
+            if case let .error(error) = store.home.partner {
+                PartnerRecovery(error: error) {
                     store.send(.home(.retryPartnerTapped))
                 }
             }
@@ -96,7 +97,7 @@ struct HomeView: View {
         ) { todayStore in
             TodaySheet(
                 store: todayStore,
-                connectionError: homeStore.dailyErrorMessage,
+                connectionError: homeStore.dailyError,
                 reconnect: { homeStore.send(.retryDailyTapped) }
             )
         }

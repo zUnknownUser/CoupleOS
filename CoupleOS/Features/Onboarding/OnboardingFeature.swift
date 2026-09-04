@@ -67,8 +67,8 @@ nonisolated struct ProfileRecoveryFeature {
         let authenticatedUser: AuthenticatedUser
         let existingUser: User?
         var firstName: String
-        var nameError: String?
-        var errorMessage: String?
+        var nameError: FieldValidation?
+        var error: UserClientError?
         var isLoading = false
 
         init(authenticatedUser: AuthenticatedUser, existingUser: User? = nil) {
@@ -98,7 +98,7 @@ nonisolated struct ProfileRecoveryFeature {
             switch action {
             case .binding(\.firstName):
                 state.nameError = nil
-                state.errorMessage = nil
+                state.error = nil
                 return .none
             case .binding, .delegate:
                 return .none
@@ -106,11 +106,11 @@ nonisolated struct ProfileRecoveryFeature {
                 guard !state.isLoading else { return .none }
                 let name = state.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !name.isEmpty else {
-                    state.nameError = "Tell us what we should call you."
+                    state.nameError = .missingName
                     return .none
                 }
                 state.isLoading = true
-                state.errorMessage = nil
+                state.error = nil
                 let authenticatedUser = state.authenticatedUser
                 let existingUser = state.existingUser
                 return .run { send in
@@ -141,7 +141,7 @@ nonisolated struct ProfileRecoveryFeature {
                 return .send(.delegate(.profileCreated(user)))
             case let .saveResponse(.failure(error)):
                 state.isLoading = false
-                state.errorMessage = error.message
+                state.error = error
                 return .none
             }
         }

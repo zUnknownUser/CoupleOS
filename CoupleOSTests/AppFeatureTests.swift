@@ -11,6 +11,9 @@ final class AppFeatureTests: XCTestCase {
         }
 
         await store.send(.task)
+        // Opening the app resolves the language before anything is drawn, so
+        // the first screen is already in it.
+        await store.receive(\.localization.task)
         await store.receive({ action in
             guard case .authStateChanged(nil) = action else { return false }
             return true
@@ -306,7 +309,7 @@ final class AppFeatureTests: XCTestCase {
                 id: firstID,
                 authenticatedUser: authUser,
                 firstName: "Alex",
-                errorMessage: UserClientError.networkUnavailable.message
+                error: .networkUnavailable
             ))
         }
         await store.send(.destination(.profileProvisioning(.retryTapped))) {
@@ -637,7 +640,7 @@ final class AppFeatureTests: XCTestCase {
             $0.destination = .resolvingSession(SessionResolutionFeature.State(
                 id: self.fixedID,
                 authenticatedUser: authUser,
-                errorMessage: error.message
+                error: error
             ))
         }
     }

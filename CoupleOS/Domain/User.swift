@@ -26,28 +26,11 @@ nonisolated struct UpdateUserRequest: Equatable, Sendable {
     let onboardingStatus: OnboardingStatus
 }
 
-nonisolated enum UserClientError: Error, Equatable, Sendable {
+nonisolated enum UserClientError: Error, Equatable, Sendable, CaseIterable {
     case documentNotFound
     case invalidData
     case networkUnavailable
     case permissionDenied
     case unavailable
     case unknown
-
-    var message: String {
-        switch self {
-        case .documentNotFound:
-            "We couldn't find your profile."
-        case .invalidData:
-            "Your profile needs attention before we can open your world."
-        case .networkUnavailable:
-            "You're offline. Your account is safe—try again when you're connected."
-        case .permissionDenied:
-            "We couldn't access your profile. Please sign in again."
-        case .unavailable:
-            "Your profile is temporarily unavailable. Please try again."
-        case .unknown:
-            "We couldn't finish setting up your profile. Please try again."
-        }
-    }
 }

@@ -8,13 +8,15 @@ struct MarketSheet: View {
     /// moment; staleness is the only thing here that depends on the clock.
     var now: Date = Date()
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         NavigationStack {
             ZStack {
                 CoupleBackground()
                 content
             }
-            .navigationTitle("Market")
+            .navigationTitle(strings.market.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
         }
@@ -30,16 +32,16 @@ struct MarketSheet: View {
             ProgressView()
                 .controlSize(.large)
                 .tint(CoupleTheme.ColorToken.pearl)
-                .accessibilityLabel("Opening your list")
+                .accessibilityLabel(strings.market.openingList)
 
-        case let .error(message):
+        case let .error(error):
             VStack(spacing: CoupleTheme.Space.large) {
-                Text("Your list is still here.")
+                Text(strings.market.listStillHere)
                     .font(.system(.title2, weight: .medium))
                     .foregroundStyle(CoupleTheme.ColorToken.pearl)
                     .multilineTextAlignment(.center)
-                InlineMessage(text: message, style: .error)
-                PrimaryButton(title: "Try again") { store.send(.retryTapped) }
+                InlineMessage(text: strings.errors.market(error), style: .error)
+                PrimaryButton(title: strings.common.tryAgain) { store.send(.retryTapped) }
             }
             .frame(maxWidth: CoupleTheme.Size.panel)
             .padding(.horizontal, CoupleTheme.Space.gutter)
@@ -73,19 +75,19 @@ struct MarketSheet: View {
                     store.send(.addItemTapped)
                 }
 
-                if let errorMessage = store.errorMessage {
+                if let error = store.error {
                     Button { store.send(.dismissErrorTapped) } label: {
-                        InlineMessage(text: errorMessage, style: .error)
+                        InlineMessage(text: strings.errors.market(error), style: .error)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityHint("Dismisses this message")
+                    .accessibilityHint(strings.market.dismissMessageHint)
                 }
 
                 if store.pending.isEmpty && store.gathered.isEmpty {
                     MarketEmptyState()
                 } else {
                     MarketItemGroup(
-                        title: "TO BRING",
+                        title: strings.market.toBringSection,
                         items: store.pending,
                         currentUserID: store.currentUserID,
                         partnerName: partnerName,
@@ -96,7 +98,7 @@ struct MarketSheet: View {
                     )
 
                     MarketItemGroup(
-                        title: "IN THE BASKET",
+                        title: strings.market.basketSection,
                         items: store.gathered,
                         currentUserID: store.currentUserID,
                         partnerName: partnerName,
@@ -104,7 +106,7 @@ struct MarketSheet: View {
                         now: now,
                         trailing: store.canClearBasket
                             ? MarketItemGroup.Trailing(
-                                title: "Clear",
+                                title: strings.market.clearBasket,
                                 action: { store.send(.clearBasketTapped) }
                             )
                             : nil,
@@ -131,6 +133,8 @@ private struct MarketRunBanner: View {
     let isChanging: Bool
     let toggle: () -> Void
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         VStack(alignment: .leading, spacing: CoupleTheme.Space.medium) {
             HStack(alignment: .firstTextBaseline) {
@@ -150,7 +154,7 @@ private struct MarketRunBanner: View {
             // The partner's run is theirs to end. Everyone else just watches.
             if run == nil || isMine {
                 PrimaryButton(
-                    title: isMine ? "I'm done" : "I'm at the market",
+                    title: isMine ? strings.market.finishRun : strings.market.startRun,
                     isEnabled: !isChanging,
                     isLoading: isChanging,
                     action: toggle
@@ -166,23 +170,19 @@ private struct MarketRunBanner: View {
         }
     }
 
-    private var person: String { partnerName ?? "Your person" }
-
     private var eyebrow: String {
-        guard run != nil else { return "MARKET RUN" }
-        return isMine ? "YOU'RE THERE" : "THEY'RE THERE"
+        guard run != nil else { return strings.market.runEyebrowIdle }
+        return isMine ? strings.market.runEyebrowMine : strings.market.runEyebrowTheirs
     }
 
     private var headline: String {
-        guard run != nil else {
-            return "Going to the store? Tell \(person) — they can still add something."
-        }
+        guard run != nil else { return strings.market.runHeadlineIdle(partnerName) }
         if isMine {
             return pendingCount == 0
-                ? "Everything is gathered."
-                : "\(pendingCount) still to gather."
+                ? strings.market.runHeadlineAllGathered
+                : strings.market.runHeadlineRemaining(pendingCount)
         }
-        return "\(person) is at the market right now."
+        return strings.market.runHeadlineTheirs(partnerName)
     }
 
     private var tint: Color {
@@ -207,6 +207,7 @@ private struct MarketComposer: View {
     let someoneIsShopping: Bool
     let submit: () -> Void
 
+    @Environment(\.strings) private var strings
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -230,7 +231,7 @@ private struct MarketComposer: View {
                 CircularGlassButton(systemImage: isSending ? "ellipsis" : "plus", action: submit)
                     .disabled(!canSubmit)
                     .opacity(canSubmit ? 1 : CoupleTheme.Opacity.disabled)
-                    .accessibilityLabel("Add to the list")
+                    .accessibilityLabel(strings.market.addToList)
             }
 
             Toggle(isOn: $isRequest) {
@@ -245,13 +246,13 @@ private struct MarketComposer: View {
     }
 
     private var prompt: Text {
-        Text(someoneIsShopping ? "Quick — add something" : "Add to the list")
+        Text(someoneIsShopping
+            ? strings.market.composerPlaceholderShopping
+            : strings.market.composerPlaceholderIdle)
             .foregroundStyle(CoupleTheme.ColorToken.tertiaryText)
     }
 
-    private var askLabel: String {
-        "Ask \(partnerName ?? "your person") for this directly"
-    }
+    private var askLabel: String { strings.market.askDirectly(partnerName) }
 }
 
 private struct MarketItemGroup: View {
@@ -312,6 +313,8 @@ private struct MarketItemRow: View {
     let toggle: () -> Void
     let remove: () -> Void
 
+    @Environment(\.strings) private var strings
+
     private var isStale: Bool { item.isStale(asOf: now) }
 
     var body: some View {
@@ -359,7 +362,7 @@ private struct MarketItemRow: View {
         // weeks. Both are still here — neither is still asking.
         .opacity(item.isPending ? (isStale ? 0.5 : 1) : 0.62)
         .contextMenu {
-            Button("Remove", systemImage: "trash", role: .destructive, action: remove)
+            Button(strings.common.remove, systemImage: "trash", role: .destructive, action: remove)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
@@ -367,33 +370,38 @@ private struct MarketItemRow: View {
     }
 
     private var attribution: String? {
-        let person = partnerName ?? "Your person"
         if isStale {
             // How long is the fact that makes "do you still want this?"
             // answerable, so the age replaces the attribution rather than
             // crowding in beside it.
             let days = item.daysWaiting(asOf: now)
-            return days >= 30 ? "Waiting a month or more" : "Waiting \(days) days"
+            return days >= 30
+                ? strings.market.waitingAMonthOrMore
+                : strings.market.waitingDays(days)
         }
         if item.isRequest && item.isPending {
-            return isMine ? "You asked for this" : "\(person) asked for this"
+            return isMine
+                ? strings.market.youAskedForThis
+                : strings.market.personAskedForThis(partnerName)
         }
-        return isMine ? nil : "Added by \(person)"
+        return isMine ? nil : strings.market.addedByPerson(partnerName)
     }
 
     private var accessibilityLabel: String {
-        let state = item.isPending ? "still to bring" : "in the basket"
+        let state = item.isPending ? strings.market.stillToBring : strings.market.inTheBasket
         return [item.name, state, attribution].compactMap { $0 }.joined(separator: ", ")
     }
 }
 
 private struct MarketEmptyState: View {
+    @Environment(\.strings) private var strings
+
     var body: some View {
         VStack(spacing: CoupleTheme.Space.small) {
-            Text("Nothing on the list.")
+            Text(strings.market.emptyTitle)
                 .font(.system(.headline, weight: .medium))
                 .foregroundStyle(CoupleTheme.ColorToken.pearl)
-            Text("Add what the house needs. Whoever gets there first will see it.")
+            Text(strings.market.emptyDetail)
                 .font(CoupleTheme.TypeToken.body)
                 .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                 .multilineTextAlignment(.center)

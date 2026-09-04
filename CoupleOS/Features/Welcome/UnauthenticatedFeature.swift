@@ -79,7 +79,7 @@ nonisolated struct InviteFeature {
         var inviteCode = ""
         var token: InviteToken?
         var presentation: Presentation = .manualEntry
-        var errorMessage: String?
+        var error: InviteClientError?
 
         enum Presentation: Equatable {
             case manualEntry
@@ -118,7 +118,7 @@ nonisolated struct InviteFeature {
         Reduce { state, action in
             switch action {
             case .binding(\.inviteCode):
-                state.errorMessage = nil
+                state.error = nil
                 return .none
             case .binding, .delegate:
                 return .none
@@ -137,7 +137,7 @@ nonisolated struct InviteFeature {
                     token = InviteToken(rawValue: input)
                 }
                 guard let token else {
-                    state.errorMessage = InviteClientError.inviteInvalid.message
+                    state.error = .inviteInvalid
                     return .none
                 }
                 state.token = token

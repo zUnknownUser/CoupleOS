@@ -103,7 +103,7 @@ final class ChoresFeatureTests: XCTestCase {
             $0.settlingChoreIDs = []
             $0.chores = [advanced]
         }
-        XCTAssertNil(store.state.errorMessage, "A lost race is not an error")
+        XCTAssertNil(store.state.error, "A lost race is not an error")
     }
 
     func testASecondTapWhileTheFirstIsInFlightGoesNowhere() async {
@@ -138,7 +138,7 @@ final class ChoresFeatureTests: XCTestCase {
         await store.send(.completeTapped("bins")) { $0.settlingChoreIDs = ["bins"] }
         await store.receive(\.completeResponse) {
             $0.settlingChoreIDs = []
-            $0.errorMessage = ChoreClientError.notYourTurn.message
+            $0.error = .notYourTurn
         }
     }
 

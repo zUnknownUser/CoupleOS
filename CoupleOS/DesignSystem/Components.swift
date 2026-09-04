@@ -103,6 +103,7 @@ struct PrimaryButton: View {
     let action: () -> Void
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.strings) private var strings
 
     @ViewBuilder
     var body: some View {
@@ -131,7 +132,7 @@ struct PrimaryButton: View {
             if isLoading {
                 ProgressView()
                     .controlSize(.small)
-                    .accessibilityLabel("Working")
+                    .accessibilityLabel(strings.common.working)
             }
         }
         .font(CoupleTheme.TypeToken.button)

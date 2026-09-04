@@ -13,7 +13,7 @@ nonisolated struct CreateDecisionFeature {
         var requestID: UUID?
         var isSubmitting = false
         var hasAttemptedSubmit = false
-        var errorMessage: String?
+        var error: DecisionClientError?
 
         var normalizedTitle: String {
             title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -23,20 +23,22 @@ nonisolated struct CreateDecisionFeature {
             options.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         }
 
-        var validationMessage: String? {
+        /// What is wrong with the draft, as a fact. The words for it belong
+        /// to the catalogue, so this stays the same in every language.
+        var validation: DecisionValidation? {
             guard hasAttemptedSubmit else { return nil }
-            if normalizedTitle.isEmpty { return "Add what you want to decide." }
+            if normalizedTitle.isEmpty { return .missingTitle }
             if normalizedTitle.count > Limits.titleLength {
-                return "Keep the question under \(Limits.titleLength) characters."
+                return .titleTooLong(maximum: Limits.titleLength)
             }
             if normalizedOptions.contains(where: { $0.isEmpty }) {
-                return "Give each choice a name."
+                return .emptyChoice
             }
             if normalizedOptions.contains(where: { $0.count > Limits.optionLength }) {
-                return "Keep each choice under \(Limits.optionLength) characters."
+                return .choiceTooLong(maximum: Limits.optionLength)
             }
             let unique = Set(normalizedOptions.map { $0.lowercased() })
-            if unique.count != normalizedOptions.count { return "Make each choice different." }
+            if unique.count != normalizedOptions.count { return .duplicateChoices }
             return nil
         }
 
@@ -106,7 +108,7 @@ nonisolated struct CreateDecisionFeature {
                 let requestID = state.requestID ?? uuid()
                 state.requestID = requestID
                 state.isSubmitting = true
-                state.errorMessage = nil
+                state.error = nil
                 return create(
                     coupleID: state.coupleID,
                     requestID: requestID,
@@ -120,7 +122,7 @@ nonisolated struct CreateDecisionFeature {
 
             case let .response(.failure(error)):
                 state.isSubmitting = false
-                state.errorMessage = error.message
+                state.error = error
                 return .none
 
             case .dismissTapped:
@@ -132,7 +134,7 @@ nonisolated struct CreateDecisionFeature {
     private func resetSubmissionIdentity(state: inout State) {
         state.requestID = nil
         state.hasAttemptedSubmit = false
-        state.errorMessage = nil
+        state.error = nil
     }
 
     private func create(
@@ -160,7 +162,7 @@ nonisolated struct CreateDecisionFeature {
         .cancellable(id: CancelID.create, cancelInFlight: true)
     }
 
-    private enum Limits {
+    enum Limits {
         static let titleLength = 160
         static let optionLength = 80
         static let minimumOptions = 2

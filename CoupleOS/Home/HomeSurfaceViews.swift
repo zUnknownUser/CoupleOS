@@ -12,16 +12,6 @@ extension HomeSignal.Urgency {
         }
     }
 
-    var eyebrow: String {
-        switch self {
-        case .live: "RIGHT NOW"
-        case .needsYou: "NEEDS YOU"
-        case .needsBoth: "NEEDS BOTH"
-        case .waiting: "WAITING"
-        case .settled: "JUST NOW"
-        }
-    }
-
     var worldActivity: SharedWorldView.Activity {
         switch self {
         case .live: .live
@@ -39,10 +29,11 @@ struct HomeNowSection: View {
     let open: (HomeSignal.Target) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.strings) private var strings
 
     var body: some View {
         VStack(alignment: .leading, spacing: CoupleTheme.Space.small) {
-            Eyebrow(text: "NOW")
+            Eyebrow(text: strings.home.nowSection)
                 .padding(.leading, CoupleTheme.Space.xSmall)
 
             ForEach(signals) { signal in
@@ -58,6 +49,7 @@ struct SignalCard: View {
     let open: () -> Void
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.strings) private var strings
 
     var body: some View {
         Button(action: open) {
@@ -65,7 +57,7 @@ struct SignalCard: View {
                 mark
 
                 VStack(alignment: .leading, spacing: CoupleTheme.Space.xSmall) {
-                    Eyebrow(text: signal.urgency.eyebrow, tint: signal.urgency.tint)
+                    Eyebrow(text: eyebrow, tint: signal.urgency.tint)
 
                     Text(signal.title)
                         .font(.system(.headline, weight: .medium))
@@ -100,9 +92,13 @@ struct SignalCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(signal.urgency.eyebrow). \(signal.title). \(signal.detail).")
+        .accessibilityLabel(
+            strings.home.signalAccessibility(eyebrow, signal.title, signal.detail)
+        )
         .accessibilityAddTraits(.isButton)
     }
+
+    private var eyebrow: String { strings.home.urgencyEyebrow(signal.urgency) }
 
     @ViewBuilder
     private var mark: some View {
@@ -160,6 +156,8 @@ struct HomeAreasSection: View {
     let areas: [ModuleSummary]
     let open: (HomeSignal.Target) -> Void
 
+    @Environment(\.strings) private var strings
+
     private let columns = [
         GridItem(.flexible(), spacing: CoupleTheme.Space.small),
         GridItem(.flexible(), spacing: CoupleTheme.Space.small)
@@ -167,7 +165,7 @@ struct HomeAreasSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: CoupleTheme.Space.small) {
-            Eyebrow(text: "OUR WORLD")
+            Eyebrow(text: strings.home.ourWorldSection)
                 .padding(.leading, CoupleTheme.Space.xSmall)
 
             LazyVGrid(columns: columns, spacing: CoupleTheme.Space.small) {
@@ -184,6 +182,7 @@ struct AreaTile: View {
     let open: () -> Void
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.strings) private var strings
 
     var body: some View {
         Button(action: open) {
@@ -207,7 +206,7 @@ struct AreaTile: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(area.module.title)
+                    Text(title)
                         .font(.system(.subheadline, weight: .semibold))
                         .foregroundStyle(CoupleTheme.ColorToken.pearl)
                     Text(area.status)
@@ -237,9 +236,11 @@ struct AreaTile: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(area.module.title). \(area.status).")
+        .accessibilityLabel(strings.home.areaAccessibility(title, area.status))
         .accessibilityAddTraits(.isButton)
     }
+
+    private var title: String { strings.home.moduleTitle(area.module) }
 
     private var tint: Color {
         if area.isLive { return CoupleTheme.ColorToken.amber }
@@ -251,9 +252,11 @@ struct AreaTile: View {
 /// What the Home says when nothing is asking for anything. Not an error state —
 /// a quiet couple is the normal case, and it should feel like rest.
 struct HomeQuietState: View {
+    @Environment(\.strings) private var strings
+
     var body: some View {
         VStack(alignment: .leading, spacing: CoupleTheme.Space.small) {
-            Eyebrow(text: "NOW")
+            Eyebrow(text: strings.home.nowSection)
                 .padding(.leading, CoupleTheme.Space.xSmall)
 
             HStack(spacing: CoupleTheme.Space.medium) {
@@ -272,7 +275,7 @@ struct HomeQuietState: View {
                 }
                 .accessibilityHidden(true)
 
-                Text("Nothing needs either of you right now.")
+                Text(strings.home.quiet)
                     .font(CoupleTheme.TypeToken.body)
                     .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)

@@ -42,7 +42,7 @@ nonisolated struct DecisionsFeature {
         case idle
         case loading
         case loaded([Decision])
-        case error(String)
+        case error(DecisionClientError)
     }
 
     enum Action {
@@ -125,7 +125,7 @@ nonisolated struct DecisionsFeature {
                     return .send(.destination(.presented(.detail(.decisionUpdated(updated)))))
                 case let .failure(error):
                     state.observationID = nil
-                    state.phase = .error(error.message)
+                    state.phase = .error(error)
                     return .none
                 }
 

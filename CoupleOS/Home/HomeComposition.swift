@@ -2,6 +2,11 @@ import Foundation
 
 /// Every area of the couple's shared life that can speak on the Home.
 ///
+/// The case carries identity and a symbol only. Its name is a word, so it
+/// lives in `Strings` and is read through `strings.home.moduleTitle(_:)` —
+/// which is what lets a module be called "Market" or "Mercado" without this
+/// type knowing either.
+///
 /// This is the list the Home grows by. A new area becomes visible in three
 /// steps: add a case here, teach its feature to build a `ModuleContribution`,
 /// and hand that contribution to `HomeComposition`. The Home surface itself
@@ -13,15 +18,6 @@ nonisolated enum CoupleModule: String, CaseIterable, Identifiable, Sendable {
     case today
 
     var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .market: "Market"
-        case .chores: "Home"
-        case .decisions: "Decisions"
-        case .today: "Today"
-        }
-    }
 
     var symbol: String {
         switch self {
@@ -135,18 +131,4 @@ nonisolated enum CoupleTiming {
     /// failure this app exists to prevent — but it stops competing for
     /// attention with things that are actually current.
     static let staleWindow: TimeInterval = 14 * 24 * 60 * 60
-}
-
-nonisolated extension HomeSignal.Urgency {
-    /// The line the world falls back to when the leading signal has no voice of
-    /// its own. Written for the couple, not for the state machine.
-    var worldCaption: String {
-        switch self {
-        case .live: "Something is happening right now."
-        case .needsYou: "Your person left something here for you."
-        case .needsBoth: "A small moment is waiting for both of you."
-        case .waiting: "Your part is done. Nothing else is required."
-        case .settled: "Something just became yours together."
-        }
-    }
 }

@@ -9,10 +9,11 @@ nonisolated struct LoginFeature {
         var password = ""
         var isPasswordVisible = false
         var isLoading = false
-        var emailError: String?
-        var passwordError: String?
-        var errorMessage: String?
-        var confirmationMessage: String?
+        var emailError: FieldValidation?
+        var passwordError: FieldValidation?
+        var error: AuthenticationError?
+        /// The one success worth saying out loud on this screen.
+        var passwordResetSent = false
     }
 
     enum Action: BindableAction {
@@ -43,8 +44,8 @@ nonisolated struct LoginFeature {
             case .binding(\.email), .binding(\.password):
                 state.emailError = nil
                 state.passwordError = nil
-                state.errorMessage = nil
-                state.confirmationMessage = nil
+                state.error = nil
+                state.passwordResetSent = false
                 return .none
 
             case .binding:
@@ -61,7 +62,7 @@ nonisolated struct LoginFeature {
                 guard !state.isLoading else { return .none }
                 guard validate(&state) else { return .none }
                 state.isLoading = true
-                state.errorMessage = nil
+                state.error = nil
                 let email = EmailAddress.normalized(state.email)
                 let password = state.password
                 return .run { send in
@@ -82,13 +83,13 @@ nonisolated struct LoginFeature {
 
             case let .signInResponse(.failure(error)):
                 state.isLoading = false
-                state.errorMessage = error.message
+                state.error = error
                 return .none
 
             case .appleSignInTapped:
                 guard !state.isLoading else { return .none }
                 state.isLoading = true
-                state.errorMessage = nil
+                state.error = nil
                 return .run { send in
                     do {
                         await send(.signInResponse(.success(
@@ -105,7 +106,7 @@ nonisolated struct LoginFeature {
                 guard !state.isLoading else { return .none }
                 guard validateEmail(&state) else { return .none }
                 state.isLoading = true
-                state.errorMessage = nil
+                state.error = nil
                 let email = EmailAddress.normalized(state.email)
                 return .run { send in
                     do {
@@ -120,12 +121,12 @@ nonisolated struct LoginFeature {
 
             case .passwordResetResponse(.success):
                 state.isLoading = false
-                state.confirmationMessage = "Check your inbox for a reset link."
+                state.passwordResetSent = true
                 return .none
 
             case let .passwordResetResponse(.failure(error)):
                 state.isLoading = false
-                state.errorMessage = error.message
+                state.error = error
                 return .none
 
             case .delegate:
@@ -136,14 +137,16 @@ nonisolated struct LoginFeature {
 
     private func validate(_ state: inout State) -> Bool {
         let validEmail = validateEmail(&state)
-        let validPassword = state.password.count >= 6
-        state.passwordError = validPassword ? nil : "Password must have at least 6 characters."
+        let validPassword = state.password.count >= CredentialRules.minimumPasswordLength
+        state.passwordError = validPassword
+            ? nil
+            : .shortPassword(minimum: CredentialRules.minimumPasswordLength)
         return validEmail && validPassword
     }
 
     private func validateEmail(_ state: inout State) -> Bool {
         let isValid = EmailAddress.isWellFormed(state.email)
-        state.emailError = isValid ? nil : "Enter a valid email address."
+        state.emailError = isValid ? nil : .invalidEmail
         return isValid
     }
 }

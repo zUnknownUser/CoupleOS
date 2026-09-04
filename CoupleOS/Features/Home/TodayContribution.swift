@@ -10,17 +10,22 @@ extension HomeFeature.State {
     ///
     /// Today is always exactly one thing, so it is always exactly one signal —
     /// what changes is how loudly it asks.
-    func homeContribution(partnerName: String?) -> ModuleContribution {
-        let person = partnerName ?? "Your person"
+    ///
+    /// The catalogue arrives as a parameter rather than being read from a
+    /// dependency: a contribution is a pure function of state, the clock and
+    /// the language, and keeping all three as arguments is what lets a test ask
+    /// what the Home said in Portuguese last Tuesday.
+    func homeContribution(strings: Strings, partnerName: String?) -> ModuleContribution {
+        let copy = strings.today
         var signals: [HomeSignal] = []
 
-        if dailyErrorMessage == nil, let experience = dailyExperience, let status = dailyStatus {
+        if dailyError == nil, let experience = dailyExperience, let status = dailyStatus {
             signals.append(HomeSignal(
                 id: "today.\(experience.id)",
                 module: .today,
                 urgency: status.urgency,
-                title: experience.prompt,
-                detail: status.detail(person: person),
+                title: copy.prompt(experience),
+                detail: status.detail(copy, partnerName),
                 symbol: status.symbol,
                 // Today outranks its peers within a tier: of everything at the
                 // same urgency, it is the one that expires tonight.
@@ -34,7 +39,7 @@ extension HomeFeature.State {
             signals: signals,
             summary: ModuleSummary(
                 module: .today,
-                status: statusLine(person: person),
+                status: statusLine(copy, partnerName),
                 attention: dailyStatus == .waitingForMe || dailyStatus == .available ? 1 : 0,
                 isLive: false,
                 target: .today
@@ -42,14 +47,14 @@ extension HomeFeature.State {
         )
     }
 
-    private func statusLine(person: String) -> String {
-        guard dailyErrorMessage == nil else { return "Tap to reconnect" }
+    private func statusLine(_ copy: Strings.Today, _ partnerName: String?) -> String {
+        guard dailyError == nil else { return copy.statusReconnect }
         switch dailyStatus {
-        case .available: return "Open for both"
-        case .waitingForMe: return "Waiting for you"
-        case .waitingForPartner: return "Waiting for \(person)"
-        case .revealAvailable: return "Revealed"
-        case nil: return "Opening…"
+        case .available: return copy.statusOpenForBoth
+        case .waitingForMe: return copy.statusWaitingForYou
+        case .waitingForPartner: return copy.statusWaitingForPartner(partnerName)
+        case .revealAvailable: return copy.statusRevealed
+        case nil: return copy.statusOpening
         }
     }
 }
@@ -73,12 +78,12 @@ private extension DailyExperience.Status {
         }
     }
 
-    func detail(person: String) -> String {
+    func detail(_ copy: Strings.Today, _ partnerName: String?) -> String {
         switch self {
-        case .available: "A small choice for each of you"
-        case .waitingForMe: "\(person) left something here"
-        case .waitingForPartner: "Your answer is in — waiting for \(person)"
-        case .revealAvailable: "You both answered — see what it means"
+        case .available: copy.detailAvailable
+        case .waitingForMe: copy.detailWaitingForMe(partnerName)
+        case .waitingForPartner: copy.detailWaitingForPartner(partnerName)
+        case .revealAvailable: copy.detailRevealAvailable
         }
     }
 }

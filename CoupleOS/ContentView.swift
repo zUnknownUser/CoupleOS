@@ -12,10 +12,25 @@ struct ContentView: View {
                 CoupleBackground()
                 ScrollView(.vertical) {
                     VStack(spacing: 0) {
-                        if !isAuthenticated {
-                            BrandLockup()
-                                .padding(.bottom, isWelcome ? CoupleTheme.Space.large : CoupleTheme.Space.medium)
+                        // One slot, one control, in every phase. The wordmark
+                        // stays centred and the language sits at the edge beside
+                        // it — two faint letters that matter only to whoever the
+                        // phone guessed wrong about. On the Home the wordmark is
+                        // gone but the slot stays, which keeps the control out of
+                        // the header: that row already carries two monograms,
+                        // both names and sign-out, and a third control pushed the
+                        // names into an ellipsis as soon as the copy was longer
+                        // than English.
+                        Group {
+                            if isAuthenticated {
+                                Color.clear.frame(height: 0)
+                            } else {
+                                BrandLockup()
+                            }
                         }
+                        .frame(maxWidth: .infinity)
+                        .overlay(alignment: .trailing) { LanguageControl() }
+                        .padding(.bottom, isWelcome ? CoupleTheme.Space.large : CoupleTheme.Space.small)
 
                         // The world belongs to the shell in every phase, at one
                         // size per phase. It used to be drawn here for everyone
@@ -61,11 +76,27 @@ struct ContentView: View {
                 .scrollDismissesKeyboard(.interactively)
             }
         }
+        .environment(\.strings, strings)
+        .environment(\.languageSettings, languageSettings)
         .preferredColorScheme(.dark)
         .animation(CoupleTheme.Motion.organic, value: destinationID)
         .sensoryFeedback(.impact(weight: .light), trigger: destinationID)
         .task { await store.send(.task).finish() }
         .onOpenURL { store.send(.openURL($0)) }
+    }
+
+    /// The one place the catalogue enters the view tree. Everything below
+    /// reads it from the environment, so a language change is a single value
+    /// changing at the root and the whole app redrawing in it.
+    private var strings: Strings { .of(store.localization.language) }
+
+    private var languageSettings: LanguageSettings {
+        LanguageSettings(
+            preference: store.localization.preference,
+            systemLanguage: store.localization.systemLanguage,
+            options: store.localization.options,
+            select: { store.send(.localization(.preferenceSelected($0))) }
+        )
     }
 
     @ViewBuilder
@@ -159,10 +190,8 @@ struct ContentView: View {
     /// world without this file being touched.
     private var worldCaption: String? {
         guard let composition else { return nil }
-        guard let leading = composition.leading else {
-            return "Alive because you\u{2019}re both here."
-        }
-        return leading.worldCaption ?? leading.urgency.worldCaption
+        guard let leading = composition.leading else { return strings.world.bothHere }
+        return leading.worldCaption ?? strings.world.urgencyCaption(leading.urgency)
     }
 
     private var worldActivity: SharedWorldView.Activity {
@@ -171,7 +200,7 @@ struct ContentView: View {
 
     private var composition: HomeComposition? {
         guard case let .authenticated(authenticated) = store.destination else { return nil }
-        return authenticated.composition()
+        return authenticated.composition(strings: strings)
     }
 
     private func worldSize(in size: CGSize) -> CGFloat {
@@ -235,6 +264,8 @@ private struct OnboardingView: View {
 }
 
 private struct BrandLockup: View {
+    @Environment(\.strings) private var strings
+
     var body: some View {
         HStack(spacing: CoupleTheme.Space.small) {
             ZStack {
@@ -243,20 +274,23 @@ private struct BrandLockup: View {
             }
             .frame(width: 24, height: 24)
             .overlay { Circle().stroke(CoupleTheme.ColorToken.hairline, lineWidth: 0.75) }
-            Text("COUPLE OS")
+            Text(strings.brand.wordmark)
                 .font(CoupleTheme.TypeToken.brand)
                 .tracking(CoupleTheme.TypeToken.eyebrowTracking)
                 .foregroundStyle(CoupleTheme.ColorToken.pearl.opacity(0.88))
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Couple OS")
+        .accessibilityLabel(strings.brand.accessibleName)
     }
 }
 
 private struct LaunchingPanel: View {
     let store: StoreOf<LaunchingFeature>
+
+    @Environment(\.strings) private var strings
+
     var body: some View {
-        Text("Opening your world…")
+        Text(strings.welcome.openingYourWorld)
             .font(CoupleTheme.TypeToken.body)
             .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
             .frame(maxWidth: CoupleTheme.Size.panel)

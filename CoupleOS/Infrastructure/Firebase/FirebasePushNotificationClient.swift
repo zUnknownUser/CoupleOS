@@ -32,7 +32,7 @@ extension PushNotificationClient {
                 return false
             }
         },
-        registerDevice: { userID in
+        registerDevice: { userID, language in
             guard let token = try? await Messaging.messaging().token(), !token.isEmpty else {
                 throw PushNotificationError.tokenUnavailable
             }
@@ -41,6 +41,7 @@ extension PushNotificationClient {
                     [
                         "token": token,
                         "platform": "ios",
+                        "language": language.tag,
                         "updatedAt": FieldValue.serverTimestamp()
                     ],
                     merge: false

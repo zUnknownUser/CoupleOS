@@ -51,7 +51,7 @@ nonisolated struct IdentityFeature {
     @ObservableState
     struct State: Equatable {
         var firstName = ""
-        var nameError: String?
+        var nameError: FieldValidation?
 
         init(firstName: String = "") {
             self.firstName = firstName
@@ -85,7 +85,7 @@ nonisolated struct IdentityFeature {
             case .continueTapped:
                 let name = state.firstName.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !name.isEmpty else {
-                    state.nameError = "Tell us what we should call you."
+                    state.nameError = .missingName
                     return .none
                 }
                 return .send(.delegate(.continueWithName(name)))

@@ -18,7 +18,7 @@ final class CreateDecisionFeatureTests: XCTestCase {
         await store.send(.submitTapped) {
             $0.hasAttemptedSubmit = true
         }
-        XCTAssertEqual(store.state.validationMessage, "Add what you want to decide.")
+        XCTAssertEqual(store.state.validation, .missingTitle)
     }
 
     func testCreateUsesOneStableIdempotencyIDAndDismisses() async {
@@ -76,7 +76,7 @@ final class CreateDecisionFeatureTests: XCTestCase {
         }
         await store.receive(.response(.failure(.networkUnavailable))) {
             $0.isSubmitting = false
-            $0.errorMessage = DecisionClientError.networkUnavailable.message
+            $0.error = .networkUnavailable
         }
         XCTAssertEqual(store.state.requestID, requestID)
     }

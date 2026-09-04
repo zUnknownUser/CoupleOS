@@ -110,7 +110,7 @@ nonisolated struct ChoreDraft: Equatable, Sendable {
     }
 }
 
-nonisolated enum ChoreClientError: Error, Equatable, Sendable {
+nonisolated enum ChoreClientError: Error, Equatable, Sendable, CaseIterable {
     case invalidInput
     case notFound
     case notYourTurn
@@ -121,24 +121,4 @@ nonisolated enum ChoreClientError: Error, Equatable, Sendable {
     case unavailable
     case invalidData
     case unknown
-
-    var message: String {
-        switch self {
-        case .invalidInput:
-            "Check the chore and how often it comes around."
-        case .notFound:
-            "This chore is no longer on your list."
-        case .notYourTurn:
-            "This one is your person's turn."
-        case .alreadyDone:
-            "This one is already taken care of."
-        case .listFull:
-            "Your list is full. Finish or remove a few first."
-        case .networkUnavailable:
-            "You're offline. Try again when your connection returns."
-        case .permissionDenied, .unavailable, .invalidData, .unknown:
-            // Deliberately does not name a cause it cannot know.
-            "We couldn't open your chores. If this keeps happening, sign out and back in."
-        }
-    }
 }

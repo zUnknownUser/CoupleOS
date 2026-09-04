@@ -7,12 +7,16 @@ extension ChoresFeature.State {
     /// next week are real, but putting them here would turn the Home into a
     /// calendar — and a Home that always has something on it is a Home nobody
     /// reads.
-    func homeContribution(partnerName: String?, now: Date = Date()) -> ModuleContribution {
-        let person = partnerName ?? "Your person"
+    func homeContribution(
+        strings: Strings,
+        partnerName: String?,
+        now: Date = Date()
+    ) -> ModuleContribution {
+        let copy = strings.chores
         guard let currentUserID else {
             return ModuleContribution(summary: ModuleSummary(
                 module: .chores,
-                status: statusLine(person: person, now: now),
+                status: statusLine(copy, partnerName, now: now),
                 target: .chores
             ))
         }
@@ -27,12 +31,12 @@ extension ChoresFeature.State {
                 id: "chores.mine",
                 module: .chores,
                 urgency: .needsYou,
-                title: others > 0 ? "\(mine.count) things at home" : first.title,
-                detail: detail(first: first, others: others, overdue: overdue.count, now: now),
+                title: others > 0 ? copy.signalMineTitleMany(mine.count) : first.title,
+                detail: detail(copy, first: first, others: others, overdue: overdue.count),
                 symbol: overdue.isEmpty ? "house.fill" : "exclamationmark.triangle.fill",
                 at: first.dueAt,
                 target: .chores,
-                worldCaption: overdue.isEmpty ? nil : "The house is waiting on you."
+                worldCaption: overdue.isEmpty ? nil : copy.captionOverdue
             ))
         }
 
@@ -49,8 +53,10 @@ extension ChoresFeature.State {
                 id: "chores.theirs",
                 module: .chores,
                 urgency: .waiting,
-                title: theirs.count == 1 ? first.title : "\(theirs.count) things with \(person)",
-                detail: "\(person)'s turn",
+                title: theirs.count == 1
+                    ? first.title
+                    : copy.signalTheirsTitleMany(theirs.count, partnerName),
+                detail: copy.signalTheirsDetail(partnerName),
                 symbol: "ellipsis",
                 at: first.dueAt,
                 target: .chores,
@@ -64,7 +70,7 @@ extension ChoresFeature.State {
                 module: .chores,
                 urgency: .settled,
                 title: fresh.title,
-                detail: "\(person) took care of this",
+                detail: copy.signalSettledDetail(partnerName),
                 symbol: "checkmark.seal.fill",
                 at: fresh.lastDoneAt ?? fresh.dueAt,
                 target: .chores,
@@ -76,7 +82,7 @@ extension ChoresFeature.State {
             signals: signals,
             summary: ModuleSummary(
                 module: .chores,
-                status: statusLine(person: person, now: now),
+                status: statusLine(copy, partnerName, now: now),
                 attention: mine.count,
                 isLive: false,
                 target: .chores
@@ -84,19 +90,28 @@ extension ChoresFeature.State {
         )
     }
 
-    private func detail(first: Chore, others: Int, overdue: Int, now: Date) -> String {
-        if overdue > 0 {
-            return overdue == 1 ? "Late" : "\(overdue) of them late"
-        }
-        return others > 0 ? "\(first.title) and \(others) more today" : "Your turn today"
+    private func detail(
+        _ copy: Strings.Chores,
+        first: Chore,
+        others: Int,
+        overdue: Int
+    ) -> String {
+        if overdue > 0 { return copy.detailLate(overdue) }
+        return others > 0
+            ? copy.detailOthersToday(first.title, others)
+            : copy.detailYourTurnToday
     }
 
-    private func statusLine(person: String, now: Date) -> String {
-        if case .error = phase { return "Tap to reconnect" }
+    private func statusLine(
+        _ copy: Strings.Chores,
+        _ partnerName: String?,
+        now: Date
+    ) -> String {
+        if case .error = phase { return copy.statusReconnect }
         let mine = mine(asOf: now).count
-        if mine > 0 { return mine == 1 ? "1 for you" : "\(mine) for you" }
+        if mine > 0 { return copy.statusForYou(mine) }
         let theirs = theirs(asOf: now).count
-        if theirs > 0 { return "\(theirs) with \(person)" }
-        return active.isEmpty ? "Nothing set up" : "All caught up"
+        if theirs > 0 { return copy.statusWithPartner(theirs, partnerName) }
+        return active.isEmpty ? copy.statusNothingSetUp : copy.statusAllCaughtUp
     }
 }

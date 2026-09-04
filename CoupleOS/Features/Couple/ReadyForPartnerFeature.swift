@@ -9,15 +9,23 @@ nonisolated struct ReadyForPartnerFeature {
         var phase: Phase = .preparingWorld
         var observationID: UUID?
         var isSigningOut = false
-        var signOutError: String?
+        var signOutError: AuthenticationError?
 
         enum Phase: Equatable {
             case preparingWorld
             case readyToInvite(Couple, CoupleInvite)
             case waitingForPartner(Couple, CoupleInvite)
             case partnerJoined(Couple)
-            case error(String)
+            case error(PreparationError)
         }
+    }
+
+    /// Preparing a world takes two calls that can fail differently. The phase
+    /// carries whichever one did, rather than the sentence it produced, so the
+    /// screen can say it in the couple's language.
+    enum PreparationError: Equatable, Sendable {
+        case couple(CoupleClientError)
+        case invite(InviteClientError)
     }
 
     enum Action {
@@ -90,7 +98,7 @@ nonisolated struct ReadyForPartnerFeature {
                 .cancellable(id: CancelID.preparation, cancelInFlight: true)
 
             case let .coupleResponse(.failure(error)):
-                state.phase = .error(error.message)
+                state.phase = .error(.couple(error))
                 return .none
 
             case let .inviteResponse(response) where response.result.isSuccess:
@@ -101,7 +109,7 @@ nonisolated struct ReadyForPartnerFeature {
 
             case let .inviteResponse(response):
                 guard case let .failure(error) = response.result else { return .none }
-                state.phase = .error(error.message)
+                state.phase = .error(.invite(error))
                 return .none
 
             case let .startObserving(request):
@@ -156,7 +164,7 @@ nonisolated struct ReadyForPartnerFeature {
                 guard state.observationID == event.id,
                       case let .failure(error) = event.result else { return .none }
                 state.observationID = nil
-                state.phase = .error(error.message)
+                state.phase = .error(.couple(error))
                 return .none
 
             case .signOutTapped:
@@ -185,7 +193,7 @@ nonisolated struct ReadyForPartnerFeature {
 
             case let .signOutResponse(.failure(error)):
                 state.isSigningOut = false
-                state.signOutError = error.message
+                state.signOutError = error
                 return .none
 
             case .delegate:

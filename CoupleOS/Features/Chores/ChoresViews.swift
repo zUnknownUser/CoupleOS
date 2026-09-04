@@ -6,13 +6,15 @@ struct ChoresSheet: View {
     let partnerName: String?
     var now: Date = Date()
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         NavigationStack {
             ZStack {
                 CoupleBackground()
                 content
             }
-            .navigationTitle("Home")
+            .navigationTitle(strings.chores.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
         }
@@ -28,15 +30,15 @@ struct ChoresSheet: View {
             ProgressView()
                 .controlSize(.large)
                 .tint(CoupleTheme.ColorToken.pearl)
-                .accessibilityLabel("Opening your chores")
+                .accessibilityLabel(strings.chores.openingChores)
 
-        case let .error(message):
+        case let .error(error):
             VStack(spacing: CoupleTheme.Space.large) {
-                Text("Your list is still here.")
+                Text(strings.chores.listStillHere)
                     .font(.system(.title2, weight: .medium))
                     .foregroundStyle(CoupleTheme.ColorToken.pearl)
-                InlineMessage(text: message, style: .error)
-                PrimaryButton(title: "Try again") { store.send(.retryTapped) }
+                InlineMessage(text: strings.errors.chore(error), style: .error)
+                PrimaryButton(title: strings.common.tryAgain) { store.send(.retryTapped) }
             }
             .frame(maxWidth: CoupleTheme.Size.panel)
             .padding(.horizontal, CoupleTheme.Space.gutter)
@@ -61,9 +63,9 @@ struct ChoresSheet: View {
                     store.send(.createTapped)
                 }
 
-                if let errorMessage = store.errorMessage {
+                if let error = store.error {
                     Button { store.send(.dismissErrorTapped) } label: {
-                        InlineMessage(text: errorMessage, style: .error)
+                        InlineMessage(text: strings.errors.chore(error), style: .error)
                     }
                     .buttonStyle(.plain)
                 }
@@ -72,7 +74,7 @@ struct ChoresSheet: View {
                     ChoresEmptyState()
                 } else {
                     ChoreGroup(
-                        title: "YOUR TURN",
+                        title: strings.chores.yourTurnSection,
                         chores: store.state.mine(asOf: now),
                         partnerName: partnerName,
                         currentUserID: store.currentUserID,
@@ -84,7 +86,7 @@ struct ChoresSheet: View {
                     )
 
                     ChoreGroup(
-                        title: withPartner,
+                        title: strings.chores.withPartnerSection(partnerName),
                         chores: store.state.theirs(asOf: now),
                         partnerName: partnerName,
                         currentUserID: store.currentUserID,
@@ -96,7 +98,7 @@ struct ChoresSheet: View {
                     )
 
                     ChoreGroup(
-                        title: "COMING UP",
+                        title: strings.chores.comingUpSection,
                         chores: store.state.upcoming(asOf: now),
                         partnerName: partnerName,
                         currentUserID: store.currentUserID,
@@ -115,10 +117,6 @@ struct ChoresSheet: View {
         }
         .scrollDismissesKeyboard(.interactively)
     }
-
-    private var withPartner: String {
-        (partnerName.map { "WITH \($0.uppercased())" } ?? "WITH YOUR PERSON")
-    }
 }
 
 private struct ChoreComposer: View {
@@ -131,10 +129,12 @@ private struct ChoreComposer: View {
     let isSending: Bool
     let submit: () -> Void
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         VStack(alignment: .leading, spacing: CoupleTheme.Space.small) {
             HStack(spacing: CoupleTheme.Space.small) {
-                TextField("", text: $title, prompt: Text("Add something the home needs")
+                TextField("", text: $title, prompt: Text(strings.chores.composerPlaceholder)
                     .foregroundStyle(CoupleTheme.ColorToken.tertiaryText))
                     .textFieldStyle(.plain)
                     .font(CoupleTheme.TypeToken.body)
@@ -152,13 +152,13 @@ private struct ChoreComposer: View {
                 CircularGlassButton(systemImage: isSending ? "ellipsis" : "plus", action: submit)
                     .disabled(!canSubmit)
                     .opacity(canSubmit ? 1 : CoupleTheme.Opacity.disabled)
-                    .accessibilityLabel("Add this chore")
+                    .accessibilityLabel(strings.chores.addChore)
             }
 
             ScrollView(.horizontal) {
                 HStack(spacing: CoupleTheme.Space.xSmall) {
                     ForEach(ChoresFeature.DraftCadence.allCases, id: \.self) { option in
-                        ChoreChip(title: option.title, isOn: option == cadence) {
+                        ChoreChip(title: strings.chores.cadence(option), isOn: option == cadence) {
                             cadence = option
                         }
                     }
@@ -169,7 +169,7 @@ private struct ChoreComposer: View {
 
             HStack(spacing: CoupleTheme.Space.xSmall) {
                 ForEach(Chore.Rotation.allCases, id: \.self) { option in
-                    ChoreChip(title: option.title, isOn: option == rotation) {
+                    ChoreChip(title: strings.chores.rotation(option), isOn: option == rotation) {
                         rotation = option
                     }
                 }
@@ -178,8 +178,8 @@ private struct ChoreComposer: View {
             if rotation != .anyone {
                 Toggle(isOn: $startsWithMe) {
                     Text(startsWithMe
-                        ? "Starts with you"
-                        : "Starts with \(partnerName ?? "your person")")
+                        ? strings.chores.startsWithYou
+                        : strings.chores.startsWithPartner(partnerName))
                         .font(CoupleTheme.TypeToken.caption)
                         .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                 }
@@ -263,6 +263,8 @@ private struct ChoreRow: View {
     let complete: () -> Void
     let remove: () -> Void
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         Button(action: complete) {
             HStack(spacing: CoupleTheme.Space.medium) {
@@ -292,36 +294,21 @@ private struct ChoreRow: View {
         .disabled(isSettling || !isActionable)
         .opacity(isActionable ? 1 : 0.72)
         .contextMenu {
-            Button("Remove", systemImage: "trash", role: .destructive, action: remove)
+            Button(strings.common.remove, systemImage: "trash", role: .destructive, action: remove)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(chore.title), \(subtitle)")
         .accessibilityAddTraits(isActionable ? .isButton : [])
-        .accessibilityHint(isActionable ? "Marks this as done" : "")
+        .accessibilityHint(isActionable ? strings.chores.markDoneHint : "")
     }
-
-    private var person: String { partnerName ?? "Your person" }
 
     private var subtitle: String {
-        let turn = turnLabel
-        switch chore.standing(asOf: now) {
-        case let .overdue(days):
-            return "\(turn) · \(days == 1 ? "1 day late" : "\(days) days late")"
-        case .dueToday:
-            return "\(turn) · today"
-        case let .upcoming(days):
-            return "\(turn) · in \(days == 1 ? "1 day" : "\(days) days")"
-        case .settled:
-            return "Done"
-        }
-    }
-
-    private var turnLabel: String {
-        switch chore.rotation {
-        case .anyone: "Either of you"
-        case .alternates, .fixed:
-            chore.ownerID == currentUserID ? "Your turn" : "\(person)'s turn"
-        }
+        let standing = chore.standing(asOf: now)
+        guard standing != .settled else { return strings.chores.standingDone }
+        return strings.chores.rowSubtitle(
+            strings.chores.turn(chore, currentUserID: currentUserID, partnerName: partnerName),
+            strings.chores.standing(standing)
+        )
     }
 
     private var mark: Color {
@@ -338,12 +325,14 @@ private struct ChoreRow: View {
 }
 
 private struct ChoresEmptyState: View {
+    @Environment(\.strings) private var strings
+
     var body: some View {
         VStack(spacing: CoupleTheme.Space.small) {
-            Text("Nothing set up yet.")
+            Text(strings.chores.emptyTitle)
                 .font(.system(.headline, weight: .medium))
                 .foregroundStyle(CoupleTheme.ColorToken.pearl)
-            Text("Add the things that keep coming back. Whose turn it is takes care of itself.")
+            Text(strings.chores.emptyDetail)
                 .font(CoupleTheme.TypeToken.body)
                 .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                 .multilineTextAlignment(.center)
@@ -355,12 +344,3 @@ private struct ChoresEmptyState: View {
     }
 }
 
-extension Chore.Rotation {
-    var title: String {
-        switch self {
-        case .alternates: "Take turns"
-        case .fixed: "Always one of us"
-        case .anyone: "Whoever gets there"
-        }
-    }
-}

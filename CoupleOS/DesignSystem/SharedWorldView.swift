@@ -19,6 +19,7 @@ struct SharedWorldView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.strings) private var strings
     @State private var appeared = false
     @State private var sharedProgress: CGFloat = 0
     @State private var interaction: CGSize = .zero
@@ -484,21 +485,8 @@ struct SharedWorldView: View {
     }
 
     private var accessibilityDescription: String {
-        guard isShared else { return "One presence waiting for its person" }
-        switch activity {
-        case .calm:
-            return "Two presences connected inside their private world"
-        case .needsBoth:
-            return "Your shared world has something waiting for both of you"
-        case .needsYou:
-            return "Your person left something waiting for you in your shared world"
-        case .waiting:
-            return "Your presence is waiting quietly for your person"
-        case .sharedMoment:
-            return "Your two presences completed a shared moment"
-        case .live:
-            return "One of you is out in the world right now"
-        }
+        guard isShared else { return strings.world.soloDescription }
+        return strings.world.description(activity)
     }
 }
 

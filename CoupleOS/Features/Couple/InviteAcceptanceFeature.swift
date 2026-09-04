@@ -13,7 +13,7 @@ nonisolated struct InviteAcceptanceFeature {
         enum Phase: Equatable {
             case accepting
             case joined(Couple)
-            case error(String)
+            case error(InviteClientError)
         }
     }
 
@@ -82,7 +82,7 @@ nonisolated struct InviteAcceptanceFeature {
                 guard state.requestID == response.id,
                       case let .failure(error) = response.result else { return .none }
                 state.requestID = nil
-                state.phase = .error(error.message)
+                state.phase = .error(error)
                 return .none
 
             case .delegate:

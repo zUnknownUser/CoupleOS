@@ -60,7 +60,15 @@ private nonisolated enum FirebaseDailyMapper {
                 return (key, number.intValue)
             })
         } else { revealed = nil }
-        return DailyExperience(id: id, periodKey: periodKey, prompt: prompt, options: options, answeredUserIDs: Set(answered), revealedAnswers: revealed)
+        return DailyExperience(
+            id: id,
+            periodKey: periodKey,
+            prompt: prompt,
+            options: options,
+            answeredUserIDs: Set(answered),
+            revealedAnswers: revealed,
+            promptID: (data["promptId"] as? String).flatMap(DailyPrompt.init(rawValue:))
+        )
     }
 }
 

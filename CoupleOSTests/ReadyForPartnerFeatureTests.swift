@@ -48,7 +48,7 @@ final class ReadyForPartnerFeatureTests: XCTestCase {
         let calls = LockIsolated(0)
         let store = TestStore(initialState: ReadyForPartnerFeature.State(
             session: TestFixtures.session,
-            phase: .error("Try again")
+            phase: .error(.couple(.unknown))
         )) { ReadyForPartnerFeature() } withDependencies: {
             $0.uuid = .constant(self.observationID)
             $0.coupleClient.createCouple = {

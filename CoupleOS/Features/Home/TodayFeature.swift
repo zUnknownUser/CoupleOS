@@ -10,7 +10,7 @@ nonisolated struct TodayFeature {
         var experience: DailyExperience
         var selectedOption: Int?
         var isSubmitting = false
-        var errorMessage: String?
+        var error: DailyExperienceError?
 
         var status: DailyExperience.Status { experience.status(for: currentUserID) }
 
@@ -39,12 +39,12 @@ nonisolated struct TodayFeature {
                 guard state.experience.canAnswer(as: state.currentUserID),
                       state.experience.options.indices.contains(index) else { return .none }
                 state.selectedOption = index
-                state.errorMessage = nil
+                state.error = nil
                 return .none
             case .submitTapped:
                 guard let option = state.selectedOption, !state.isSubmitting else { return .none }
                 state.isSubmitting = true
-                state.errorMessage = nil
+                state.error = nil
                 return .run { [coupleID = state.coupleID, experienceID = state.experience.id] send in
                     do { await send(.response(.success(try await dailyClient.submitAnswer(coupleID, experienceID, option)))) }
                     catch is CancellationError { return }
@@ -60,7 +60,7 @@ nonisolated struct TodayFeature {
                 return completedNow ? dismissEffect() : .none
             case let .response(.failure(error)):
                 state.isSubmitting = false
-                state.errorMessage = error.message
+                state.error = error
                 return .none
             case let .experienceUpdated(experience):
                 let completedNow = !state.experience.isRevealed && experience.isRevealed

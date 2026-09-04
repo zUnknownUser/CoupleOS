@@ -34,7 +34,7 @@ final class SignUpFeatureTests: XCTestCase {
         await store.send(.createAccountTapped) { $0.isLoading = true }
         await store.receive(\.authenticationResponse.failure) {
             $0.isLoading = false
-            $0.errorMessage = AuthenticationError.emailAlreadyInUse.message
+            $0.error = .emailAlreadyInUse
         }
     }
 
@@ -45,7 +45,7 @@ final class SignUpFeatureTests: XCTestCase {
         let store = TestStore(initialState: state) { SignUpFeature() }
 
         await store.send(.createAccountTapped) {
-            $0.emailError = "Enter a valid email address."
+            $0.emailError = .invalidEmail
         }
     }
 
@@ -56,7 +56,7 @@ final class SignUpFeatureTests: XCTestCase {
         let store = TestStore(initialState: state) { SignUpFeature() }
 
         await store.send(.createAccountTapped) {
-            $0.passwordError = "Password must have at least 6 characters."
+            $0.passwordError = .shortPassword(minimum: CredentialRules.minimumPasswordLength)
         }
     }
 

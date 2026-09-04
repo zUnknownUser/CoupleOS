@@ -3,40 +3,60 @@ import SwiftUI
 
 struct IdentityPanel: View {
     @Bindable var store: StoreOf<IdentityFeature>
+
+    @Environment(\.strings) private var strings
+
     var body: some View {
-        FormPanel(title: "Let's start with you.",
-            subtitle: "One person begins. The world becomes yours when the other arrives.",
-            backAction: { store.send(.backTapped) }) {
-            CoupleField(label: "YOUR NAME") {
-                TextField("What should we call you?", text: $store.firstName)
+        FormPanel(
+            title: strings.identity.title,
+            subtitle: strings.identity.subtitle,
+            backAction: { store.send(.backTapped) }
+        ) {
+            CoupleField(label: strings.identity.nameLabel) {
+                TextField(strings.identity.namePlaceholder, text: $store.firstName)
                     .textContentType(.givenName)
                     .textInputAutocapitalization(.words)
             }
-            if let error = store.nameError { FieldMessage(text: error) }
-            PrimaryButton(title: "Continue") { store.send(.continueTapped) }
-            PrivacyNote(text: "Private by design. Nothing here is public.")
+            if let error = store.nameError {
+                FieldMessage(text: strings.auth.validation(error))
+            }
+            PrimaryButton(title: strings.common.continueAction) { store.send(.continueTapped) }
+            PrivacyNote(text: strings.identity.privacy)
         }
     }
 }
 
 struct ProfileRecoveryPanel: View {
     @Bindable var store: StoreOf<ProfileRecoveryFeature>
+
+    @Environment(\.strings) private var strings
+
     var body: some View {
-        FormPanel(title: "Let's finish your space.",
-            subtitle: "Your account is safe. We just need the name that belongs inside your world.",
-            backAction: nil) {
-            CoupleField(label: "YOUR NAME") {
-                TextField("What should we call you?", text: $store.firstName)
+        FormPanel(
+            title: strings.identity.recoveryTitle,
+            subtitle: strings.identity.recoverySubtitle,
+            backAction: nil
+        ) {
+            CoupleField(label: strings.identity.nameLabel) {
+                TextField(strings.identity.namePlaceholder, text: $store.firstName)
                     .textContentType(.givenName)
                     .textInputAutocapitalization(.words)
                     .disabled(store.isLoading)
             }
-            if let error = store.nameError { FieldMessage(text: error) }
-            if let message = store.errorMessage { InlineMessage(text: message, style: .error) }
-            PrimaryButton(title: "Continue", isEnabled: !store.isLoading, isLoading: store.isLoading) {
+            if let error = store.nameError {
+                FieldMessage(text: strings.auth.validation(error))
+            }
+            if let error = store.error {
+                InlineMessage(text: strings.errors.user(error), style: .error)
+            }
+            PrimaryButton(
+                title: strings.common.continueAction,
+                isEnabled: !store.isLoading,
+                isLoading: store.isLoading
+            ) {
                 store.send(.continueTapped)
             }
-            PrivacyNote(text: "We found your account and will continue exactly where you left off.")
+            PrivacyNote(text: strings.identity.recoveryPrivacy)
         }
     }
 }

@@ -4,6 +4,16 @@ import type { FunctionsErrorCode } from "firebase-functions/https";
 
 export const INVITE_LIFETIME_DAYS = 7;
 export const INVITE_LIFETIME_MS = INVITE_LIFETIME_DAYS * 24 * 60 * 60 * 1000;
+/**
+ * The question the daily moment asks, as an identity rather than a sentence.
+ *
+ * One document is shared by both people, and they can be reading in different
+ * languages, so the text cannot be the thing that is stored. The English copy
+ * below still is — an older client that knows nothing about ids has to keep
+ * working — but a current client renders from the id and ignores it.
+ */
+export const DAILY_PROMPT_ID = "everyday";
+
 export const DAILY_OPTIONS = [
   "Stay in and make it cozy",
   "Go somewhere new",
@@ -64,6 +74,8 @@ export interface InviteRecord {
 
 export interface DailyExperienceRecord {
   periodKey: string;
+  /** Which question this is. Absent on documents written before ids existed. */
+  promptId?: string;
   prompt: string;
   options: string[];
   answeredUserIds: string[];
@@ -215,70 +227,153 @@ export interface NotificationRequest {
   subject?: string;
 }
 
+/**
+ * The languages the app ships, as the client writes them onto a device record.
+ * Kept in step with `AppLanguage` on iOS by hand: this is a short, closed list,
+ * and the alternative — inferring copy at runtime — is how a notification ends
+ * up in a language nobody chose.
+ */
+export const NOTIFICATION_LANGUAGES = ["en", "pt-BR"] as const;
+export type NotificationLanguage = (typeof NOTIFICATION_LANGUAGES)[number];
+export const DEFAULT_NOTIFICATION_LANGUAGE: NotificationLanguage = "en";
+
+/**
+ * The language a device asked for, if we speak it.
+ *
+ * Matched on the primary subtag, exactly as the client does, so an older
+ * install that wrote a bare "pt" — or a device record from before language was
+ * stored at all — still lands somewhere sensible instead of failing.
+ */
+export function notificationLanguage(value: unknown): NotificationLanguage {
+  if (typeof value !== "string") return DEFAULT_NOTIFICATION_LANGUAGE;
+  const primary = value.replace(/_/g, "-").split("-")[0]?.toLowerCase();
+  if (primary === "pt") return "pt-BR";
+  if (primary === "en") return "en";
+  return DEFAULT_NOTIFICATION_LANGUAGE;
+}
+
+export interface NotificationCopy {
+  title: string;
+  body: string;
+  /** Used instead of `body` when the request carries a subject. */
+  bodyWith?: (subject: string) => string;
+}
+
 export const NOTIFICATION_COPY: Record<
-  NotificationEvent,
-  {
-    title: string;
-    body: string;
-    /** Used instead of `body` when the request carries a subject. */
-    bodyWith?: (subject: string) => string;
-  }
+  NotificationLanguage,
+  Record<NotificationEvent, NotificationCopy>
 > = {
-  "partner-answered": {
-    title: "Today",
-    body: "Your person left something here for you.",
-  },
-  "daily-revealed": {
-    title: "Today",
-    body: "You both left a mark. See what it means.",
-  },
-  "partner-joined": {
-    title: "Your world is shared",
-    body: "Your person just joined you.",
-  },
-  "decision-asked": {
-    title: "A decision",
-    body: "Your person is waiting on your pick.",
-  },
-  "decision-resolved": {
-    title: "Decided",
-    body: "Your person made the call. See what it is.",
+  en: {
+    "partner-answered": {
+      title: "Today",
+      body: "Your person left something here for you.",
+    },
+    "daily-revealed": {
+      title: "Today",
+      body: "You both left a mark. See what it means.",
+    },
+    "partner-joined": {
+      title: "Your world is shared",
+      body: "Your person just joined you.",
+    },
+    "decision-asked": {
+      title: "A decision",
+      body: "Your person is waiting on your pick.",
+    },
+    "decision-resolved": {
+      title: "Decided",
+      body: "Your person made the call. See what it is.",
+    },
+    /**
+     * The one notification the Market module exists for. It is deliberately
+     * urgent-sounding: unlike everything else here, it stops being actionable
+     * the moment your person walks out of the store.
+     */
+    "market-run-started": {
+      title: "At the market",
+      body: "Your person is at the store. Anything you need?",
+    },
+    "market-item-requested": {
+      title: "One thing",
+      body: "Your person asked you to bring something home.",
+      bodyWith: (subject) => `Your person asked you to bring ${subject}.`,
+    },
+    /**
+     * Someone added to the list while the other is standing in the store. A
+     * different moment from an ask, and it reads differently: nobody is being
+     * asked for a favour, the basket simply grew.
+     */
+    "market-item-added": {
+      title: "At the market",
+      body: "Something was just added to your list.",
+      bodyWith: (subject) => `Added to your list: ${subject}`,
+    },
+    /**
+     * Sent on completion, never on lateness. A chore that nags is a chore that
+     * gets the whole app muted, and being told what your person did for the
+     * home is the half of this worth delivering.
+     */
+    "chore-done": {
+      title: "Taken care of",
+      body: "Your person took care of something at home.",
+      bodyWith: (subject) => `Your person took care of ${subject}.`,
+    },
   },
   /**
-   * The one notification the Market module exists for. It is deliberately
-   * urgent-sounding: unlike everything else here, it stops being actionable the
-   * moment your person walks out of the store.
+   * Portuguese keeps "sua pessoa" for the same reason English keeps "your
+   * person": it names someone warmly without gendering them, which matters
+   * here because the backend never learns who the other person is.
    */
-  "market-run-started": {
-    title: "At the market",
-    body: "Your person is at the store. Anything you need?",
-  },
-  "market-item-requested": {
-    title: "One thing",
-    body: "Your person asked you to bring something home.",
-    bodyWith: (subject) => `Your person asked you to bring ${subject}.`,
-  },
-  /**
-   * Someone added to the list while the other is standing in the store. A
-   * different moment from an ask, and it reads differently: nobody is being
-   * asked for a favour, the basket simply grew.
-   */
-  "market-item-added": {
-    title: "At the market",
-    body: "Something was just added to your list.",
-    bodyWith: (subject) => `Added to your list: ${subject}`,
-  },
-  /**
-   * Sent on completion, never on lateness. A chore that nags is a chore that
-   * gets the whole app muted, and being told what your person did for the home
-   * is the half of this worth delivering.
-   */
-  "chore-done": {
-    title: "Taken care of",
-    body: "Your person took care of something at home.",
-    bodyWith: (subject) => `Your person took care of ${subject}.`,
+  "pt-BR": {
+    "partner-answered": {
+      title: "Hoje",
+      body: "Sua pessoa deixou algo aqui para você.",
+    },
+    "daily-revealed": {
+      title: "Hoje",
+      body: "Vocês dois deixaram uma marca. Veja o que significa.",
+    },
+    "partner-joined": {
+      title: "O mundo agora é dos dois",
+      body: "Sua pessoa acabou de entrar.",
+    },
+    "decision-asked": {
+      title: "Uma decisão",
+      body: "Sua pessoa está esperando sua escolha.",
+    },
+    "decision-resolved": {
+      title: "Decidido",
+      body: "Sua pessoa escolheu. Veja o que ficou.",
+    },
+    "market-run-started": {
+      title: "No mercado",
+      body: "Sua pessoa está no mercado. Precisa de alguma coisa?",
+    },
+    "market-item-requested": {
+      title: "Uma coisa",
+      body: "Sua pessoa pediu para você trazer algo.",
+      bodyWith: (subject) => `Sua pessoa pediu para você trazer ${subject}.`,
+    },
+    "market-item-added": {
+      title: "No mercado",
+      body: "Algo acabou de entrar na sua lista.",
+      bodyWith: (subject) => `Adicionado à sua lista: ${subject}`,
+    },
+    "chore-done": {
+      title: "Resolvido",
+      body: "Sua pessoa cuidou de algo em casa.",
+      bodyWith: (subject) => `Sua pessoa cuidou de ${subject}.`,
+    },
   },
 };
+
+/** The words for one event, in one language. */
+export function notificationCopy(
+  event: NotificationEvent,
+  language: NotificationLanguage,
+): NotificationCopy {
+  return NOTIFICATION_COPY[language][event];
+}
 
 /** Callable payloads arrive untyped; ids are used to build document paths. */
 export function requireDocumentId(
@@ -438,6 +533,7 @@ export function dailyResponse(id: string, record: DailyExperienceRecord) {
   return {
     id,
     periodKey: record.periodKey,
+    promptId: record.promptId ?? null,
     prompt: record.prompt,
     options: record.options,
     answeredUserIds: record.answeredUserIds,

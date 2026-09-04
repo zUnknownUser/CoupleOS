@@ -67,7 +67,7 @@ nonisolated struct MarketBoard: Equatable, Sendable {
     var run: MarketRun?
 }
 
-nonisolated enum MarketClientError: Error, Equatable, Sendable {
+nonisolated enum MarketClientError: Error, Equatable, Sendable, CaseIterable {
     case invalidInput
     case itemNotFound
     case runNotFound
@@ -79,34 +79,4 @@ nonisolated enum MarketClientError: Error, Equatable, Sendable {
     case unavailable
     case invalidData
     case unknown
-
-    var message: String {
-        switch self {
-        case .invalidInput:
-            "Check what you're adding."
-        case .itemNotFound:
-            "This item is no longer on the list."
-        case .runNotFound:
-            "This market run has already ended."
-        case .notShopper:
-            "Only the person at the store can finish this run."
-        case .runAlreadyFinished:
-            "This market run is already done."
-        case .listFull:
-            "Your list is full. Clear a few things first."
-        case .networkUnavailable:
-            "You're offline. Your list is safe — try again when you're back."
-        case .permissionDenied:
-            // Deliberately does not name a cause. A refusal here is almost
-            // never the user being in the wrong Couple World — far more often
-            // it is a stale sign-in or a rule that was never published — and
-            // an error that guesses wrong sends people looking in the wrong
-            // place.
-            "We couldn't open your list. If this keeps happening, sign out and back in."
-        case .unavailable:
-            "Your list is temporarily unavailable."
-        case .invalidData, .unknown:
-            "We couldn't open your list. Please try again."
-        }
-    }
 }

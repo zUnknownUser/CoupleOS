@@ -87,13 +87,17 @@ service cloud.firestore {
     match /users/{userId}/devices/{deviceId} {
       allow get, list: if isOwner(userId);
 
+      // `language` is the language this install reads in; the backend picks
+      // the wording of every notification from it. Closed to the tags the app
+      // actually ships, so a device can never ask for copy that does not exist.
       allow create, update: if isOwner(userId)
-        && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt'])
-        && request.resource.data.keys().hasAll(['token', 'platform', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['token', 'platform', 'language', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['token', 'platform', 'language', 'updatedAt'])
         && request.resource.data.token is string
         && request.resource.data.token.size() > 0
         && request.resource.data.token.size() <= 4096
         && request.resource.data.platform == 'ios'
+        && request.resource.data.language in ['en', 'pt-BR']
         && request.resource.data.updatedAt == request.time;
 
       allow delete: if isOwner(userId);

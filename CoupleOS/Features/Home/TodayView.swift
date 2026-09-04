@@ -3,32 +3,37 @@ import SwiftUI
 
 struct TodaySheet: View {
     let store: StoreOf<TodayFeature>
-    let connectionError: String?
+    let connectionError: DailyExperienceError?
     let reconnect: () -> Void
+
+    @Environment(\.strings) private var strings
 
     var body: some View {
         VStack(alignment: .leading, spacing: CoupleTheme.Space.large) {
-            Eyebrow(text: "TODAY")
+            Eyebrow(text: strings.today.eyebrow)
 
-            Text(store.experience.prompt)
+            Text(strings.today.prompt(store.experience))
                 .font(.system(.title, weight: .medium))
                 .tracking(CoupleTheme.TypeToken.displayTracking)
                 .foregroundStyle(CoupleTheme.ColorToken.pearl)
 
             moment
 
-            if let errorMessage = store.errorMessage {
-                InlineMessage(text: errorMessage, style: .error)
+            if let error = store.error {
+                InlineMessage(text: strings.errors.dailyExperience(error), style: .error)
             }
 
             if let connectionError {
-                InlineMessage(text: connectionError, style: .error)
-                Button("Reconnect", action: reconnect)
+                InlineMessage(
+                    text: strings.errors.dailyExperience(connectionError),
+                    style: .error
+                )
+                Button(strings.today.reconnect, action: reconnect)
                     .foregroundStyle(CoupleTheme.ColorToken.accent)
                     .frame(minHeight: CoupleTheme.Size.minimumTouchTarget)
             }
 
-            Button("Back to our world") {
+            Button(strings.today.backToOurWorld) {
                 store.send(.dismissTapped)
             }
             .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
@@ -64,6 +69,7 @@ struct TodaySheet: View {
 
     @ViewBuilder
     private var options: some View {
+        let choices = strings.today.options(store.experience)
         LazyVGrid(
             columns: [
                 GridItem(.flexible(), spacing: CoupleTheme.Space.small),
@@ -71,9 +77,9 @@ struct TodaySheet: View {
             ],
             spacing: CoupleTheme.Space.small
         ) {
-            ForEach(store.experience.options.indices, id: \.self) { index in
+            ForEach(choices.indices, id: \.self) { index in
                 OptionCard(
-                    text: store.experience.options[index],
+                    text: choices[index],
                     isSelected: store.selectedOption == index
                 ) {
                     store.send(.optionTapped(index))
@@ -83,7 +89,7 @@ struct TodaySheet: View {
 
         if store.selectedOption != nil {
             PrimaryButton(
-                title: store.isSubmitting ? "Saving…" : "Leave this here",
+                title: store.isSubmitting ? strings.today.saving : strings.today.leaveThisHere,
                 isEnabled: !store.isSubmitting
             ) {
                 store.send(.submitTapped)
@@ -127,12 +133,14 @@ private struct OptionCard: View {
 }
 
 private struct WaitingForPartnerNote: View {
+    @Environment(\.strings) private var strings
+
     var body: some View {
         VStack(alignment: .leading, spacing: CoupleTheme.Space.small) {
-            Text("Your answer is here.")
+            Text(strings.today.waitingTitle)
                 .font(.system(.headline, weight: .medium))
                 .foregroundStyle(CoupleTheme.ColorToken.mint)
-            Text("It stays private until your person leaves theirs. You can keep using your world meanwhile.")
+            Text(strings.today.waitingDetail)
                 .font(CoupleTheme.TypeToken.body)
                 .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
         }
@@ -147,20 +155,23 @@ private struct RevealView: View {
     let experience: DailyExperience
     let currentUserID: String
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         VStack(alignment: .leading, spacing: CoupleTheme.Space.medium) {
-            Text("You both left a mark here.")
+            Text(strings.today.revealTitle)
                 .font(.system(.headline, weight: .medium))
                 .foregroundStyle(CoupleTheme.ColorToken.mint)
 
+            let choices = strings.today.options(experience)
             ForEach(experience.revealedAnswers?.keys.sorted() ?? [], id: \.self) { userID in
                 if let index = experience.revealedAnswers?[userID],
-                   experience.options.indices.contains(index) {
+                   choices.indices.contains(index) {
                     VStack(alignment: .leading, spacing: CoupleTheme.Space.xSmall) {
-                        Text(userID == currentUserID ? "You" : "Your person")
+                        Text(userID == currentUserID ? strings.today.you : strings.today.yourPerson)
                             .font(CoupleTheme.TypeToken.caption)
                             .foregroundStyle(CoupleTheme.ColorToken.tertiaryText)
-                        Text(experience.options[index])
+                        Text(choices[index])
                             .font(CoupleTheme.TypeToken.body)
                             .foregroundStyle(CoupleTheme.ColorToken.pearl)
                     }

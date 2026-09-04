@@ -6,15 +6,15 @@ extension DecisionsFeature.State {
     /// Each question waiting on you keeps its own words — a decision *is* its
     /// title, and collapsing them into a count would throw away the only thing
     /// that makes one worth answering before another.
-    func homeContribution(partnerName: String?) -> ModuleContribution {
-        let person = partnerName ?? "Your person"
+    func homeContribution(strings: Strings, partnerName: String?) -> ModuleContribution {
+        let copy = strings.decisions
         var signals = needsMyResponse.map { decision in
             HomeSignal(
                 id: "decisions.needs.\(decision.id)",
                 module: .decisions,
                 urgency: .needsYou,
                 title: decision.title,
-                detail: "\(person) is waiting on your pick",
+                detail: copy.signalNeedsDetail(partnerName),
                 symbol: "arrow.triangle.branch",
                 at: decision.createdAt,
                 target: .decision(id: decision.id),
@@ -29,8 +29,12 @@ extension DecisionsFeature.State {
                 id: "decisions.waiting",
                 module: .decisions,
                 urgency: .waiting,
-                title: count == 1 ? oldest.title : "\(count) decisions with \(person)",
-                detail: count == 1 ? "Waiting for \(person)" : "Waiting quietly",
+                title: count == 1
+                    ? oldest.title
+                    : copy.signalWaitingTitleMany(count, partnerName),
+                detail: count == 1
+                    ? copy.signalWaitingDetailOne(partnerName)
+                    : copy.signalWaitingDetailMany,
                 symbol: "ellipsis",
                 at: oldest.createdAt,
                 target: .decision(id: oldest.id),
@@ -44,7 +48,7 @@ extension DecisionsFeature.State {
                 module: .decisions,
                 urgency: .settled,
                 title: fresh.selectedOption ?? fresh.title,
-                detail: "You settled this together",
+                detail: copy.signalSettledDetail,
                 symbol: "checkmark.seal.fill",
                 at: fresh.resolvedAt ?? fresh.createdAt,
                 target: .decision(id: fresh.id),
@@ -52,21 +56,24 @@ extension DecisionsFeature.State {
             ))
         }
 
-        return ModuleContribution(signals: signals, summary: summary(person: person))
+        return ModuleContribution(
+            signals: signals,
+            summary: summary(copy, partnerName)
+        )
     }
 
-    private func summary(person: String) -> ModuleSummary {
+    private func summary(_ copy: Strings.Decisions, _ partnerName: String?) -> ModuleSummary {
         let status: String
         if case .error = phase {
-            status = "Tap to reconnect"
+            status = copy.statusReconnect
         } else if !needsMyResponse.isEmpty {
-            status = "\(needsMyResponse.count) for you"
+            status = copy.statusForYou(needsMyResponse.count)
         } else if !waitingForPartner.isEmpty {
-            status = "\(waitingForPartner.count) with \(person)"
+            status = copy.statusWithPartner(waitingForPartner.count, partnerName)
         } else if decisions.isEmpty {
-            status = "Nothing open"
+            status = copy.statusNothingOpen
         } else {
-            status = "All settled"
+            status = copy.statusAllSettled
         }
 
         return ModuleSummary(

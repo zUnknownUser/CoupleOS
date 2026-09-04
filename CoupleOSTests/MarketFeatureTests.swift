@@ -123,7 +123,7 @@ final class MarketFeatureTests: XCTestCase {
         await store.send(.removeItemTapped("a")) { $0.settlingItemIDs = ["a"] }
         await store.receive(\.removeResponse) {
             $0.settlingItemIDs = []
-            $0.errorMessage = MarketClientError.networkUnavailable.message
+            $0.error = .networkUnavailable
         }
         XCTAssertEqual(store.state.items.map(\.id), ["a"])
     }
@@ -208,7 +208,7 @@ final class MarketFeatureTests: XCTestCase {
         await store.send(.clearBasketTapped) { $0.isClearingBasket = true }
         await store.receive(\.clearBasketResponse) {
             $0.isClearingBasket = false
-            $0.errorMessage = MarketClientError.networkUnavailable.message
+            $0.error = .networkUnavailable
         }
         XCTAssertEqual(store.state.gathered.map(\.id), ["b"])
     }

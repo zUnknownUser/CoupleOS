@@ -6,8 +6,12 @@ extension MarketFeature.State {
     /// Only a run or an open ask is loud enough to reach the Home. A list that
     /// is merely long stays in the area tile, because a list nobody is standing
     /// in front of is not news.
-    func homeContribution(partnerName: String?, now: Date = Date()) -> ModuleContribution {
-        let person = partnerName ?? "Your person"
+    func homeContribution(
+        strings: Strings,
+        partnerName: String?,
+        now: Date = Date()
+    ) -> ModuleContribution {
+        let copy = strings.market
         var signals: [HomeSignal] = []
 
         if let run = partnerRun {
@@ -15,28 +19,28 @@ extension MarketFeature.State {
                 id: "market.run.\(run.id)",
                 module: .market,
                 urgency: .live,
-                title: "\(person) is at the market",
+                title: copy.signalPartnerRunTitle(partnerName),
                 detail: pending.isEmpty
-                    ? "Nothing on the list yet — ask for something"
-                    : "\(pending.count) \(pending.count == 1 ? "thing" : "things") to bring · add anything?",
+                    ? copy.signalRunDetailEmpty
+                    : copy.signalRunDetailPending(pending.count),
                 symbol: "figure.walk.motion",
                 at: run.startedAt,
                 target: .market,
-                worldCaption: "\(person) is out in the world. Now is the moment."
+                worldCaption: copy.captionPartnerRun(partnerName)
             ))
         } else if let run = myRun {
             signals.append(HomeSignal(
                 id: "market.run.\(run.id)",
                 module: .market,
                 urgency: .live,
-                title: "You're at the market",
+                title: copy.signalMyRunTitle,
                 detail: pending.isEmpty
-                    ? "Everything is gathered"
-                    : "\(pending.count) still to gather",
+                    ? copy.signalMyRunDetailEmpty
+                    : copy.signalMyRunDetailPending(pending.count),
                 symbol: "basket.fill",
                 at: run.startedAt,
                 target: .market,
-                worldCaption: "You're out there. \(person) can still reach you."
+                worldCaption: copy.captionMyRun(partnerName)
             ))
         }
 
@@ -52,45 +56,45 @@ extension MarketFeature.State {
                 module: .market,
                 urgency: .needsYou,
                 title: others > 0
-                    ? "\(person) asked for \(currentAsks.count) things"
+                    ? copy.signalAsksTitle(partnerName, currentAsks.count)
                     : ask.name,
                 detail: others > 0
-                    ? "\(ask.name) and \(others) more"
-                    : "\(person) asked you to bring this",
+                    ? copy.signalAsksDetailMany(ask.name, others)
+                    : copy.signalAsksDetailOne(partnerName),
                 symbol: "hand.raised.fill",
                 at: ask.requestedAt,
                 target: .market,
-                worldCaption: "\(person) is counting on you for something small."
+                worldCaption: copy.captionAsks(partnerName)
             ))
         }
 
         return ModuleContribution(
             signals: signals,
-            summary: summary(person: person, asks: currentAsks.count, now: now)
+            summary: ModuleSummary(
+                module: .market,
+                status: statusLine(copy, partnerName, now: now),
+                attention: currentAsks.count,
+                isLive: activeRun != nil,
+                target: .market
+            )
         )
     }
 
-    private func summary(person: String, asks: Int, now: Date) -> ModuleSummary {
-        ModuleSummary(
-            module: .market,
-            status: statusLine(person: person, now: now),
-            attention: asks,
-            isLive: activeRun != nil,
-            target: .market
-        )
-    }
-
-    private func statusLine(person: String, now: Date) -> String {
-        if case .error = phase { return "Tap to reconnect" }
-        if partnerRun != nil { return "\(person) is there now" }
-        if myRun != nil { return "You're there now" }
+    private func statusLine(
+        _ copy: Strings.Market,
+        _ partnerName: String?,
+        now: Date
+    ) -> String {
+        if case .error = phase { return copy.statusReconnect }
+        if partnerRun != nil { return copy.statusPartnerThere(partnerName) }
+        if myRun != nil { return copy.statusYouThere }
         // The tile counts what is current. Stale items are still on the list,
         // but promising "12 to bring" when nine of them are months old is a lie
         // the Couple learns to distrust.
         let current = pending.count - stale(asOf: now).count
         guard current > 0 else {
-            return pending.isEmpty ? "Nothing to bring" : "Nothing current"
+            return pending.isEmpty ? copy.statusNothingToBring : copy.statusNothingCurrent
         }
-        return "\(current) to bring"
+        return copy.statusToBring(current)
     }
 }

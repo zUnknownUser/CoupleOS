@@ -9,7 +9,7 @@ nonisolated struct DecisionDetailFeature {
         let currentUserID: String
         var selectedOptionIndex: Int?
         var isResolving = false
-        var errorMessage: String?
+        var error: DecisionClientError?
 
         init(decision: Decision, currentUserID: String) {
             self.decision = decision
@@ -60,7 +60,7 @@ nonisolated struct DecisionDetailFeature {
                       let decision = state.decision,
                       decision.options.indices.contains(index) else { return .none }
                 state.selectedOptionIndex = index
-                state.errorMessage = nil
+                state.error = nil
                 return .none
 
             case .resolveTapped:
@@ -69,7 +69,7 @@ nonisolated struct DecisionDetailFeature {
                       let decision = state.decision,
                       let optionIndex = state.selectedOptionIndex else { return .none }
                 state.isResolving = true
-                state.errorMessage = nil
+                state.error = nil
                 return resolve(decision: decision, optionIndex: optionIndex)
 
             case let .response(.success(decision)):
@@ -80,7 +80,7 @@ nonisolated struct DecisionDetailFeature {
 
             case let .response(.failure(error)):
                 state.isResolving = false
-                state.errorMessage = error.message
+                state.error = error
                 return .none
 
             case let .decisionUpdated(decision):

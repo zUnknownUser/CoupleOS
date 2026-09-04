@@ -10,9 +10,9 @@ nonisolated struct SignUpFeature {
         var password = ""
         var isPasswordVisible = false
         var isLoading = false
-        var emailError: String?
-        var passwordError: String?
-        var errorMessage: String?
+        var emailError: FieldValidation?
+        var passwordError: FieldValidation?
+        var error: AuthenticationError?
 
         init(firstName: String) {
             self.firstName = firstName
@@ -44,7 +44,7 @@ nonisolated struct SignUpFeature {
             case .binding(\.email), .binding(\.password):
                 state.emailError = nil
                 state.passwordError = nil
-                state.errorMessage = nil
+                state.error = nil
                 return .none
 
             case .binding:
@@ -62,7 +62,7 @@ nonisolated struct SignUpFeature {
                 guard !state.isLoading else { return .none }
                 guard validate(&state) else { return .none }
                 state.isLoading = true
-                state.errorMessage = nil
+                state.error = nil
 
                 let email = EmailAddress.normalized(state.email)
                 let password = state.password
@@ -83,7 +83,7 @@ nonisolated struct SignUpFeature {
 
             case let .authenticationResponse(.failure(error)):
                 state.isLoading = false
-                state.errorMessage = error.message
+                state.error = error
                 return .none
 
             case .delegate:
@@ -94,9 +94,11 @@ nonisolated struct SignUpFeature {
 
     private func validate(_ state: inout State) -> Bool {
         let validEmail = EmailAddress.isWellFormed(state.email)
-        let validPassword = state.password.count >= 6
-        state.emailError = validEmail ? nil : "Enter a valid email address."
-        state.passwordError = validPassword ? nil : "Password must have at least 6 characters."
+        let validPassword = state.password.count >= CredentialRules.minimumPasswordLength
+        state.emailError = validEmail ? nil : .invalidEmail
+        state.passwordError = validPassword
+            ? nil
+            : .shortPassword(minimum: CredentialRules.minimumPasswordLength)
         return validEmail && validPassword
     }
 }

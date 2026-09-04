@@ -6,8 +6,11 @@ nonisolated struct PushNotificationClient: Sendable {
     /// Asks the system for permission, registering with APNs when granted.
     var requestAuthorization: @Sendable () async -> Bool = { false }
 
-    /// Stores this install's current token so a partner's action can reach it.
-    var registerDevice: @Sendable (_ userID: String) async throws -> Void
+    /// Stores this install's current token so a partner's action can reach it,
+    /// alongside the language this install reads in — the backend picks the
+    /// wording of every notification from it, per device rather than per
+    /// person, so two phones in one Couple World can differ.
+    var registerDevice: @Sendable (_ userID: String, _ language: AppLanguage) async throws -> Void
 
     /// Removes this install's token, so a signed-out phone stops receiving a
     /// Couple's notifications.
@@ -25,7 +28,7 @@ extension PushNotificationClient: DependencyKey {
     /// everywhere, so only a test that opts in has to think about it.
     static let testValue = PushNotificationClient(
         requestAuthorization: { false },
-        registerDevice: { _ in },
+        registerDevice: { _, _ in },
         unregisterDevice: { _ in },
         tokenRefreshes: { .finished }
     )

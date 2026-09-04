@@ -17,13 +17,19 @@ nonisolated struct AppFeature {
     struct State: Equatable {
         var destination: Destination.State
         var pendingInvite: InviteToken?
+        /// Which language the whole app is speaking. It sits at the root
+        /// because it outlives every destination: the choice is made before
+        /// sign-in and still holds after sign-out.
+        var localization = LocalizationFeature.State()
 
         init(
             destination: Destination.State = .launching(LaunchingFeature.State()),
-            pendingInvite: InviteToken? = nil
+            pendingInvite: InviteToken? = nil,
+            localization: LocalizationFeature.State = LocalizationFeature.State()
         ) {
             self.destination = destination
             self.pendingInvite = pendingInvite
+            self.localization = localization
         }
     }
 
@@ -31,6 +37,7 @@ nonisolated struct AppFeature {
         case task
         case openURL(URL)
         case destination(Destination.Action)
+        case localization(LocalizationFeature.Action)
         case authStateChanged(AuthenticatedUser?)
         case sessionResponse(
             id: UUID,
@@ -56,6 +63,10 @@ nonisolated struct AppFeature {
     }
 
     var body: some ReducerOf<Self> {
+        Scope(state: \.localization, action: \.localization) {
+            LocalizationFeature()
+        }
+
         Scope(state: \.destination, action: \.destination) {
             Destination.body
         }
@@ -63,7 +74,15 @@ nonisolated struct AppFeature {
         Reduce { state, action in
             switch action {
             case .task:
-                return observeAuthentication()
+                return .merge(.send(.localization(.task)), observeAuthentication())
+
+            case let .localization(.delegate(.languageChanged(language))):
+                // The one thing downstream of language that is not a view: the
+                // device record the backend picks push copy from.
+                return .send(.destination(.authenticated(.languageChanged(language))))
+
+            case .localization:
+                return .none
 
             case let .openURL(url):
                 return handleOpenURL(url, state: &state)
@@ -169,7 +188,8 @@ nonisolated struct AppFeature {
             state.pendingInvite = nil
             state.destination = .authenticated(AuthenticatedFeature.State(
                 session: session,
-                couple: couple
+                couple: couple,
+                language: state.localization.language
             ))
             return .none
 
@@ -177,7 +197,8 @@ nonisolated struct AppFeature {
             guard let session = activeSession(in: state.destination) else { return .none }
             state.destination = .authenticated(AuthenticatedFeature.State(
                 session: session,
-                couple: couple
+                couple: couple,
+                language: state.localization.language
             ))
             return .none
 
@@ -228,7 +249,7 @@ nonisolated struct AppFeature {
                 route(authenticatedUser: authenticatedUser, profile: nil, state: &state)
             } else {
                 var updated = resolution
-                updated.errorMessage = error.message
+                updated.error = error
                 state.destination = .resolvingSession(updated)
             }
         }
@@ -254,7 +275,7 @@ nonisolated struct AppFeature {
 
         case let .failure(error):
             var updated = provisioning
-            updated.errorMessage = error.message
+            updated.error = error
             state.destination = .profileProvisioning(updated)
         }
 
@@ -264,7 +285,7 @@ nonisolated struct AppFeature {
     private func resolveSession(for user: AuthenticatedUser, state: inout State) -> Effect<Action> {
         if case let .resolvingSession(current) = state.destination,
            current.authenticatedUser.id == user.id,
-           current.errorMessage == nil {
+           current.error == nil {
             return .none
         }
 
@@ -311,7 +332,7 @@ nonisolated struct AppFeature {
     ) -> Effect<Action> {
         if case let .profileProvisioning(current) = state.destination,
            current.authenticatedUser.id == user.id,
-           current.errorMessage == nil {
+           current.error == nil {
             return .none
         }
 
@@ -392,7 +413,8 @@ nonisolated struct AppFeature {
             ))
         case .completed:
             state.destination = .authenticated(AuthenticatedFeature.State(
-                session: session
+                session: session,
+                language: state.localization.language
             ))
         }
     }

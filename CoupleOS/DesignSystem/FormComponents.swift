@@ -8,12 +8,15 @@ struct PasswordField: View {
     let isEnabled: Bool
     let contentType: UITextContentType
     let toggle: () -> Void
+
+    @Environment(\.strings) private var strings
+
     var body: some View {
-        CoupleInlineField(label: "PASSWORD") {
+        CoupleInlineField(label: strings.auth.passwordLabel) {
             HStack(spacing: CoupleTheme.Space.small) {
                 Group {
-                    if isVisible { TextField("Your password", text: $password) }
-                    else { SecureField("Your password", text: $password) }
+                    if isVisible { TextField(strings.auth.passwordPlaceholder, text: $password) }
+                    else { SecureField(strings.auth.passwordPlaceholder, text: $password) }
                 }
                 .textContentType(contentType)
                 .disabled(!isEnabled)
@@ -25,7 +28,7 @@ struct PasswordField: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(!isEnabled)
-                .accessibilityLabel(isVisible ? "Hide password" : "Show password")
+                .accessibilityLabel(isVisible ? strings.auth.hidePassword : strings.auth.showPassword)
             }
         }
     }
@@ -37,6 +40,7 @@ struct FormPanel<Content: View>: View {
     let backAction: (() -> Void)?
     @ViewBuilder let content: Content
     @ScaledMetric(relativeTo: .title) private var titleSize = CoupleTheme.TypeToken.titleSize
+    @Environment(\.strings) private var strings
 
     init(title: String, subtitle: String, backAction: (() -> Void)?, @ViewBuilder content: () -> Content) {
         self.title = title
@@ -49,7 +53,7 @@ struct FormPanel<Content: View>: View {
         VStack(alignment: .leading, spacing: CoupleTheme.Space.large) {
             if let backAction {
                 CircularGlassButton(systemImage: "chevron.left", action: backAction)
-                    .accessibilityLabel("Back")
+                    .accessibilityLabel(strings.common.back)
             }
             VStack(alignment: .leading, spacing: CoupleTheme.Space.small) {
                 Text(title)
@@ -69,10 +73,12 @@ struct FormPanel<Content: View>: View {
 }
 
 struct OrDivider: View {
+    @Environment(\.strings) private var strings
+
     var body: some View {
         HStack(spacing: CoupleTheme.Space.medium) {
             Rectangle().fill(CoupleTheme.ColorToken.hairline).frame(height: 0.5)
-            Text("OR").font(CoupleTheme.TypeToken.caption).foregroundStyle(CoupleTheme.ColorToken.tertiaryText)
+            Text(strings.common.or).font(CoupleTheme.TypeToken.caption).foregroundStyle(CoupleTheme.ColorToken.tertiaryText)
             Rectangle().fill(CoupleTheme.ColorToken.hairline).frame(height: 0.5)
         }
         .accessibilityHidden(true)
@@ -81,13 +87,16 @@ struct OrDivider: View {
 
 struct FieldMessage: View {
     let text: String
+
+    @Environment(\.strings) private var strings
+
     var body: some View {
         Text(text)
             .font(CoupleTheme.TypeToken.caption)
             .foregroundStyle(CoupleTheme.ColorToken.error)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, CoupleTheme.Space.medium)
-            .accessibilityLabel("Error: \(text)")
+            .accessibilityLabel("\(strings.common.errorPrefix): \(text)")
     }
 }
 
@@ -95,12 +104,17 @@ struct InlineMessage: View {
     enum Style { case error, success }
     let text: String
     let style: Style
+
+    @Environment(\.strings) private var strings
+
     var body: some View {
         Label(text, systemImage: style == .error ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
             .font(CoupleTheme.TypeToken.caption)
             .foregroundStyle(style == .error ? CoupleTheme.ColorToken.error : CoupleTheme.ColorToken.mint)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityLabel("\(style == .error ? "Error" : "Success"): \(text)")
+            .accessibilityLabel(
+                "\(style == .error ? strings.common.errorPrefix : strings.common.successPrefix): \(text)"
+            )
     }
 }
 

@@ -7,6 +7,8 @@ struct DecisionsSheet: View {
     @Bindable var store: StoreOf<DecisionsFeature>
     let partnerName: String?
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -33,8 +35,8 @@ struct DecisionsSheet: View {
                             open: { store.send(.decisionTapped($0)) }
                         )
 
-                        if case let .error(message) = store.phase {
-                            DecisionsRecovery(message: message) {
+                        if case let .error(error) = store.phase {
+                            DecisionsRecovery(error: error) {
                                 store.send(.retryTapped)
                             }
                         }
@@ -45,7 +47,7 @@ struct DecisionsSheet: View {
                     .safeAreaPadding(.vertical, CoupleTheme.Space.medium)
                 }
             }
-            .navigationTitle("Decisions")
+            .navigationTitle(strings.decisions.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
         }

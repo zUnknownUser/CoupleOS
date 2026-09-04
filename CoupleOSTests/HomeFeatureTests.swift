@@ -104,11 +104,11 @@ final class HomeFeatureTests: XCTestCase {
             result: .failure(.networkUnavailable)
         ))) {
             $0.dailyObservationID = nil
-            $0.dailyErrorMessage = DailyExperienceError.networkUnavailable.message
+            $0.dailyError = .networkUnavailable
         }
 
         await store.send(.retryDailyTapped) {
-            $0.dailyErrorMessage = nil
+            $0.dailyError = nil
             $0.dailyObservationID = self.requestID
         }
         XCTAssertEqual(reattached.value, 1)
@@ -118,7 +118,7 @@ final class HomeFeatureTests: XCTestCase {
         var state = HomeFeature.State()
         state.dailyCoupleID = "couple-1"
         state.dailyCurrentUserID = TestFixtures.authenticatedUser.id
-        state.dailyErrorMessage = DailyExperienceError.notFound.message
+        state.dailyError = .notFound
         let experience = dailyExperience()
 
         let store = TestStore(initialState: state) {
@@ -130,7 +130,7 @@ final class HomeFeatureTests: XCTestCase {
         }
 
         await store.send(.retryDailyTapped) {
-            $0.dailyErrorMessage = nil
+            $0.dailyError = nil
             $0.dailyRequestID = self.requestID
         }
         await store.receive(\.dailyResponse) {

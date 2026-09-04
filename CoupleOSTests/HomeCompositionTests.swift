@@ -55,17 +55,18 @@ final class HomeCompositionTests: XCTestCase {
     }
 
     func testASignalCanSpeakForTheWorldInItsOwnVoice() {
+        let strings = Strings.english
         var own = signal(id: "live", module: .market, urgency: .live)
         own.worldCaption = "Alex is out in the world."
         let borrowed = signal(id: "plain", module: .decisions, urgency: .needsYou)
 
         XCTAssertEqual(
-            own.worldCaption ?? own.urgency.worldCaption,
+            own.worldCaption ?? strings.world.urgencyCaption(own.urgency),
             "Alex is out in the world."
         )
         XCTAssertEqual(
-            borrowed.worldCaption ?? borrowed.urgency.worldCaption,
-            HomeSignal.Urgency.needsYou.worldCaption
+            borrowed.worldCaption ?? strings.world.urgencyCaption(borrowed.urgency),
+            strings.world.urgencyCaption(.needsYou)
         )
         XCTAssertEqual(HomeSignal.Urgency.live.worldActivity, .live)
     }
@@ -83,7 +84,7 @@ final class HomeCompositionTests: XCTestCase {
             run: TestFixtures.marketRun(shopperID: "user-2")
         )
 
-        let contribution = state.homeContribution(partnerName: "Sam")
+        let contribution = state.homeContribution(strings: .english, partnerName: "Sam")
         let live = contribution.signals.first
 
         XCTAssertEqual(live?.urgency, .live)
@@ -105,7 +106,7 @@ final class HomeCompositionTests: XCTestCase {
             run: TestFixtures.marketRun(shopperID: "user-1")
         )
 
-        let signals = state.homeContribution(partnerName: "Sam").signals
+        let signals = state.homeContribution(strings: .english, partnerName: "Sam").signals
 
         // One card, not two: you are already holding the basket.
         XCTAssertEqual(signals.count, 1)
@@ -127,6 +128,7 @@ final class HomeCompositionTests: XCTestCase {
         // Pinned to just after the ask: with a live clock this fixture would
         // age past the stale window and the assertion would rot.
         let contribution = state.homeContribution(
+            strings: .english,
             partnerName: "Sam",
             now: Date(timeIntervalSince1970: 1_700_000_200)
         )
@@ -147,7 +149,7 @@ final class HomeCompositionTests: XCTestCase {
             decision(id: "w2", creator: "user-1", responder: "user-2", title: "Beach or hills?"),
         ])
 
-        let signals = state.homeContribution(partnerName: "Sam").signals
+        let signals = state.homeContribution(strings: .english, partnerName: "Sam").signals
 
         XCTAssertEqual(signals.first?.title, "Where do we eat?")
         XCTAssertEqual(signals.first?.target, .decision(id: "mine"))
@@ -166,7 +168,7 @@ final class HomeCompositionTests: XCTestCase {
         state.coupleID = "couple-1"
         state.board = MarketBoard(items: [], run: TestFixtures.marketRun(shopperID: "user-2"))
 
-        let contribution = state.homeContribution(partnerName: nil)
+        let contribution = state.homeContribution(strings: .english, partnerName: nil)
 
         XCTAssertEqual(contribution.signals.first?.title, "Your person is at the market")
         XCTAssertEqual(contribution.summary.status, "Your person is there now")
@@ -189,7 +191,7 @@ final class HomeCompositionTests: XCTestCase {
             run: nil
         )
 
-        let fresh = state.homeContribution(partnerName: "Sam", now: asked.addingTimeInterval(60))
+        let fresh = state.homeContribution(strings: .english, partnerName: "Sam", now: asked.addingTimeInterval(60))
         XCTAssertEqual(fresh.signals.first?.urgency, .needsYou)
         XCTAssertEqual(fresh.summary.attention, 1)
         XCTAssertEqual(fresh.summary.status, "1 to bring")
@@ -197,7 +199,7 @@ final class HomeCompositionTests: XCTestCase {
         // Fifteen days later the item is still on the list, but it has stopped
         // competing with things that are actually current.
         let later = asked.addingTimeInterval(15 * 24 * 60 * 60)
-        let stale = state.homeContribution(partnerName: "Sam", now: later)
+        let stale = state.homeContribution(strings: .english, partnerName: "Sam", now: later)
         XCTAssertTrue(stale.signals.isEmpty)
         XCTAssertEqual(stale.summary.attention, 0)
         XCTAssertEqual(stale.summary.status, "Nothing current")
@@ -229,7 +231,7 @@ final class HomeCompositionTests: XCTestCase {
             dueAt: now.addingTimeInterval(-3 * 24 * 60 * 60)
         )]
 
-        let contribution = state.homeContribution(partnerName: "Sam", now: now)
+        let contribution = state.homeContribution(strings: .english, partnerName: "Sam", now: now)
         let signal = contribution.signals.first
 
         XCTAssertEqual(signal?.urgency, .needsYou)
@@ -253,7 +255,7 @@ final class HomeCompositionTests: XCTestCase {
             dueAt: now.addingTimeInterval(7 * 24 * 60 * 60)
         )]
 
-        let contribution = state.homeContribution(partnerName: "Sam", now: now)
+        let contribution = state.homeContribution(strings: .english, partnerName: "Sam", now: now)
 
         // Real, but not now. A Home that always has something on it is a Home
         // nobody reads.
@@ -271,7 +273,7 @@ final class HomeCompositionTests: XCTestCase {
         state.partnerID = "user-2"
         state.chores = [TestFixtures.chore(id: "bins", title: "Bins", ownerID: "user-2", dueAt: now)]
 
-        let contribution = state.homeContribution(partnerName: "Sam", now: now)
+        let contribution = state.homeContribution(strings: .english, partnerName: "Sam", now: now)
 
         XCTAssertEqual(contribution.signals.first?.urgency, .waiting)
         XCTAssertEqual(contribution.signals.first?.detail, "Sam's turn")
@@ -296,7 +298,7 @@ final class HomeCompositionTests: XCTestCase {
             lastDoneAt: now.addingTimeInterval(-600)
         )]
 
-        let settled = state.homeContribution(partnerName: "Sam", now: now)
+        let settled = state.homeContribution(strings: .english, partnerName: "Sam", now: now)
             .signals.first { $0.urgency == .settled }
 
         XCTAssertEqual(settled?.title, "Dishes")
@@ -318,7 +320,7 @@ final class HomeCompositionTests: XCTestCase {
             lastDoneAt: now.addingTimeInterval(-600)
         )]
 
-        let signals = state.homeContribution(partnerName: "Sam", now: now).signals
+        let signals = state.homeContribution(strings: .english, partnerName: "Sam", now: now).signals
         XCTAssertFalse(signals.contains { $0.urgency == .settled })
     }
 
@@ -339,8 +341,8 @@ final class HomeCompositionTests: XCTestCase {
         market.board = MarketBoard(items: [], run: TestFixtures.marketRun(shopperID: "user-2"))
 
         let composition = HomeComposition([
-            market.homeContribution(partnerName: "Sam", now: now),
-            chores.homeContribution(partnerName: "Sam", now: now),
+            market.homeContribution(strings: .english, partnerName: "Sam", now: now),
+            chores.homeContribution(strings: .english, partnerName: "Sam", now: now),
         ])
 
         // Someone standing in a store outranks a chore due today, because only

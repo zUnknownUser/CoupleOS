@@ -7,7 +7,7 @@ nonisolated struct SessionResolutionFeature {
     struct State: Equatable {
         let id: UUID
         let authenticatedUser: AuthenticatedUser
-        var errorMessage: String?
+        var error: UserClientError?
     }
 
     enum Action {
@@ -24,7 +24,7 @@ nonisolated struct ProfileProvisioningFeature {
         let id: UUID
         let authenticatedUser: AuthenticatedUser
         let firstName: String
-        var errorMessage: String?
+        var error: UserClientError?
     }
 
     enum Action {

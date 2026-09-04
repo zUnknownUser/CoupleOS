@@ -10,7 +10,13 @@ import {
   requireInviteToken,
   requireMarketId,
   requireMarketItemStatus,
+  DAILY_OPTIONS,
+  DAILY_PROMPT_ID,
   NOTIFICATION_COPY,
+  NOTIFICATION_LANGUAGES,
+  dailyResponse,
+  notificationCopy,
+  notificationLanguage,
   marketHistoryRecord,
   advanceChore,
   choreDraft,
@@ -155,26 +161,98 @@ describe("Market input", () => {
 
 describe("Notification copy", () => {
   it("names the item when the request carries one", () => {
-    const asked = NOTIFICATION_COPY["market-item-requested"];
-    const added = NOTIFICATION_COPY["market-item-added"];
+    const asked = notificationCopy("market-item-requested", "en");
+    const added = notificationCopy("market-item-added", "en");
 
     assert.equal(asked.bodyWith?.("AA batteries"), "Your person asked you to bring AA batteries.");
     assert.equal(added.bodyWith?.("AA batteries"), "Added to your list: AA batteries");
   });
 
+  it("names it in Portuguese too", () => {
+    const asked = notificationCopy("market-item-requested", "pt-BR");
+    const added = notificationCopy("market-item-added", "pt-BR");
+
+    assert.equal(asked.bodyWith?.("pilhas AA"), "Sua pessoa pediu para você trazer pilhas AA.");
+    assert.equal(added.bodyWith?.("pilhas AA"), "Adicionado à sua lista: pilhas AA");
+  });
+
   it("still reads as a sentence with no subject to name", () => {
-    for (const event of ["market-item-requested", "market-item-added"] as const) {
-      const copy = NOTIFICATION_COPY[event];
-      assert.ok(copy.body.length > 0);
-      assert.ok(copy.title.length > 0);
+    for (const language of NOTIFICATION_LANGUAGES) {
+      for (const event of ["market-item-requested", "market-item-added"] as const) {
+        const copy = notificationCopy(event, language);
+        assert.ok(copy.body.length > 0);
+        assert.ok(copy.title.length > 0);
+      }
     }
   });
 
-  it("leaves every event with copy, named or not", () => {
-    for (const [event, copy] of Object.entries(NOTIFICATION_COPY)) {
-      assert.ok(copy.title.length > 0, `${event} has no title`);
-      assert.ok(copy.body.length > 0, `${event} has no body`);
+  it("leaves every event with copy in every language", () => {
+    for (const language of NOTIFICATION_LANGUAGES) {
+      for (const [event, copy] of Object.entries(NOTIFICATION_COPY[language])) {
+        assert.ok(copy.title.length > 0, `${language}/${event} has no title`);
+        assert.ok(copy.body.length > 0, `${language}/${event} has no body`);
+      }
     }
+  });
+
+  it("only names a subject where the same event names one in English", () => {
+    // A device in one language must never get a vaguer notification than a
+    // device in another for the same event.
+    for (const event of Object.keys(NOTIFICATION_COPY.en) as (keyof typeof NOTIFICATION_COPY.en)[]) {
+      assert.equal(
+        NOTIFICATION_COPY.en[event].bodyWith !== undefined,
+        NOTIFICATION_COPY["pt-BR"][event].bodyWith !== undefined,
+        `${event} disagrees about naming its subject`,
+      );
+    }
+  });
+});
+
+describe("Daily prompt identity", () => {
+  it("answers with the id so each phone can say the question itself", () => {
+    const record = {
+      periodKey: "2026-09-04",
+      promptId: DAILY_PROMPT_ID,
+      prompt: "What would feel most like us today?",
+      options: [...DAILY_OPTIONS],
+      answeredUserIds: [],
+    };
+
+    assert.equal(dailyResponse("2026-09-04", record).promptId, "everyday");
+  });
+
+  it("still answers for a document written before ids existed", () => {
+    const record = {
+      periodKey: "2026-09-04",
+      prompt: "What would feel most like us today?",
+      options: [...DAILY_OPTIONS],
+      answeredUserIds: [],
+    };
+
+    assert.equal(dailyResponse("2026-09-04", record).promptId, null);
+    assert.equal(
+      dailyResponse("2026-09-04", record).prompt,
+      "What would feel most like us today?",
+      "The English text stays the fallback for a client that knows no ids",
+    );
+  });
+});
+
+describe("Device language", () => {
+  it("lands region variants on a language we speak", () => {
+    assert.equal(notificationLanguage("pt-BR"), "pt-BR");
+    assert.equal(notificationLanguage("pt"), "pt-BR");
+    assert.equal(notificationLanguage("pt_PT"), "pt-BR");
+    assert.equal(notificationLanguage("en-GB"), "en");
+  });
+
+  it("falls back rather than dropping a device", () => {
+    // Records written before the app stored a language still have to be
+    // deliverable — silence is worse than the wrong language.
+    assert.equal(notificationLanguage(undefined), "en");
+    assert.equal(notificationLanguage(null), "en");
+    assert.equal(notificationLanguage(42), "en");
+    assert.equal(notificationLanguage("fr-FR"), "en");
   });
 });
 

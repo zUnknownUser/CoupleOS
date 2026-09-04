@@ -58,7 +58,7 @@ final class InviteAcceptanceFeatureTests: XCTestCase {
         let store = makeStore { _ in throw error }
         await store.send(.task) { $0.requestID = self.requestID }
         await store.receive(.response(.init(id: self.requestID, result: .failure(error)))) {
-            $0.phase = .error(error.message)
+            $0.phase = .error(error)
             $0.requestID = nil
         }
     }

@@ -19,7 +19,7 @@ nonisolated struct ChoresFeature {
         /// Chores with a completion in flight, held per id so one row settling
         /// never blocks another.
         var settlingChoreIDs: Set<String> = []
-        var errorMessage: String?
+        var error: ChoreClientError?
 
         var active: [Chore] { chores.filter { $0.status == .active } }
 
@@ -82,24 +82,13 @@ nonisolated struct ChoresFeature {
             case let .everyDays(days): .everyDays(days)
             }
         }
-
-        var title: String {
-            switch self {
-            case .once: "Once"
-            case .daily: "Daily"
-            case .everyDays(7): "Weekly"
-            case .everyDays(14): "Every 2 weeks"
-            case .everyDays(30): "Monthly"
-            case let .everyDays(days): "Every \(days) days"
-            }
-        }
     }
 
     enum Phase: Equatable {
         case idle
         case loading
         case ready
-        case error(String)
+        case error(ChoreClientError)
     }
 
     enum Action: BindableAction {
@@ -145,7 +134,7 @@ nonisolated struct ChoresFeature {
                 state.currentUserID = currentUserID
                 state.partnerID = partnerID
                 state.phase = .loading
-                state.errorMessage = nil
+                state.error = nil
                 return startObservation(coupleID: coupleID, state: &state)
 
             case .stop:
@@ -155,11 +144,11 @@ nonisolated struct ChoresFeature {
             case .retryTapped:
                 guard let coupleID = state.coupleID else { return .none }
                 state.phase = .loading
-                state.errorMessage = nil
+                state.error = nil
                 return startObservation(coupleID: coupleID, state: &state)
 
             case .dismissErrorTapped:
-                state.errorMessage = nil
+                state.error = nil
                 return .none
 
             case let .observationEvent(event):
@@ -171,7 +160,7 @@ nonisolated struct ChoresFeature {
                     state.chores = chores.filter { $0.coupleID == event.coupleID }
                 case let .failure(error):
                     state.observationID = nil
-                    state.phase = .error(error.message)
+                    state.phase = .error(error)
                 }
                 return .none
 
@@ -190,7 +179,7 @@ nonisolated struct ChoresFeature {
                 case let .success(chore):
                     upsert(chore, state: &state)
                 case let .failure(error):
-                    state.errorMessage = error.message
+                    state.error = error
                 }
                 return .none
 
@@ -200,14 +189,14 @@ nonisolated struct ChoresFeature {
                 case let .success(chore):
                     upsert(chore, state: &state)
                 case let .failure(error):
-                    state.errorMessage = error.message
+                    state.error = error
                 }
                 return .none
 
             case let .removeResponse(id, error):
                 state.settlingChoreIDs.remove(id)
                 if let error {
-                    state.errorMessage = error.message
+                    state.error = error
                 } else {
                     state.chores.removeAll { $0.id == id }
                 }
@@ -223,7 +212,7 @@ nonisolated struct ChoresFeature {
         }
         let requestID = uuid()
         state.isCreating = true
-        state.errorMessage = nil
+        state.error = nil
         state.draftTitle = ""
 
         return .run { send in
@@ -244,7 +233,7 @@ nonisolated struct ChoresFeature {
         // second cycle.
         let expectedDueAt = chore.dueAt
         state.settlingChoreIDs.insert(id)
-        state.errorMessage = nil
+        state.error = nil
 
         return .run { send in
             guard let result = await settled({
@@ -259,7 +248,7 @@ nonisolated struct ChoresFeature {
             return .none
         }
         state.settlingChoreIDs.insert(id)
-        state.errorMessage = nil
+        state.error = nil
 
         return .run { send in
             guard let result = await settled({

@@ -10,7 +10,7 @@ final class LoginFeatureTests: XCTestCase {
         let store = TestStore(initialState: state) { LoginFeature() }
 
         await store.send(.continueTapped) {
-            $0.emailError = "Enter a valid email address."
+            $0.emailError = .invalidEmail
         }
     }
 
@@ -21,7 +21,7 @@ final class LoginFeatureTests: XCTestCase {
         let store = TestStore(initialState: state) { LoginFeature() }
 
         await store.send(.continueTapped) {
-            $0.passwordError = "Password must have at least 6 characters."
+            $0.passwordError = .shortPassword(minimum: CredentialRules.minimumPasswordLength)
         }
     }
 
@@ -56,7 +56,7 @@ final class LoginFeatureTests: XCTestCase {
         await store.send(.continueTapped) { $0.isLoading = true }
         await store.receive(\.signInResponse.failure) {
             $0.isLoading = false
-            $0.errorMessage = AuthenticationError.invalidCredentials.message
+            $0.error = .invalidCredentials
         }
     }
 

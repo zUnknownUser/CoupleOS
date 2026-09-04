@@ -34,7 +34,7 @@ final class DecisionDetailFeatureTests: XCTestCase {
         await store.send(.optionTapped(1)) { $0.selectedOptionIndex = 1 }
         await store.send(.resolveTapped) {
             $0.isResolving = true
-            $0.errorMessage = nil
+            $0.error = nil
         }
         await store.receive(.response(.success(resolved))) {
             $0.decision = resolved

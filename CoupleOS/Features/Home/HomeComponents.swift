@@ -6,6 +6,8 @@ struct CoupleHeader: View {
     let isSigningOut: Bool
     let signOut: () -> Void
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         HStack(spacing: CoupleTheme.Space.medium) {
             HStack(spacing: -8) {
@@ -19,9 +21,12 @@ struct CoupleHeader: View {
                     .font(.system(.headline, weight: .semibold))
                     .foregroundStyle(CoupleTheme.ColorToken.pearl)
                     .lineLimit(1)
-                Label("Private shared space", systemImage: "lock.fill")
+                Label(strings.home.privateSpace, systemImage: "lock.fill")
                     .font(CoupleTheme.TypeToken.caption)
                     .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
+                    // Truncating reads better here than a caption that grows
+                    // to four lines and pushes the Home down with it.
+                    .lineLimit(1)
             }
 
             Spacer(minLength: CoupleTheme.Space.small)
@@ -31,7 +36,7 @@ struct CoupleHeader: View {
                 action: signOut
             )
             .disabled(isSigningOut)
-            .accessibilityLabel("Sign out")
+            .accessibilityLabel(strings.home.signOut)
         }
         .accessibilityElement(children: .contain)
     }
@@ -51,13 +56,15 @@ struct CoupleHeader: View {
 
     private var headerTitle: String {
         guard case let .loaded(user) = partner else { return currentUser.firstName }
-        return "\(currentUser.firstName) & \(user.firstName)"
+        return strings.home.bothNames(currentUser.firstName, user.firstName)
     }
 }
 
 private struct PresenceMonogram: View {
     let name: String?
     let color: Color
+
+    @Environment(\.strings) private var strings
 
     var body: some View {
         ZStack {
@@ -69,7 +76,7 @@ private struct PresenceMonogram: View {
         }
         .frame(width: 42, height: 42)
         .background(color.opacity(0.16), in: .circle)
-        .accessibilityLabel(name ?? "Partner profile loading")
+        .accessibilityLabel(name ?? strings.home.partnerLoading)
     }
 
     private var initial: String {
@@ -80,13 +87,15 @@ private struct PresenceMonogram: View {
 }
 
 struct PartnerRecovery: View {
-    let message: String
+    let error: UserClientError
     let retry: () -> Void
+
+    @Environment(\.strings) private var strings
 
     var body: some View {
         VStack(spacing: CoupleTheme.Space.small) {
-            InlineMessage(text: message, style: .error)
-            Button("Try partner profile again", action: retry)
+            InlineMessage(text: strings.errors.user(error), style: .error)
+            Button(strings.home.retryPartner, action: retry)
                 .font(CoupleTheme.TypeToken.caption)
                 .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
                 .frame(minHeight: CoupleTheme.Size.minimumTouchTarget)
@@ -97,13 +106,15 @@ struct PartnerRecovery: View {
 struct HomeLoadingView: View {
     let firstName: String
 
+    @Environment(\.strings) private var strings
+
     var body: some View {
         VStack(spacing: CoupleTheme.Space.large) {
-            Text("Welcome back, \(firstName).")
+            Text(strings.home.welcomeBack(firstName))
                 .font(.system(.title, weight: .medium))
                 .tracking(CoupleTheme.TypeToken.displayTracking)
                 .foregroundStyle(CoupleTheme.ColorToken.pearl)
-            Text("Opening your shared world…")
+            Text(strings.home.openingSharedWorld)
                 .font(CoupleTheme.TypeToken.body)
                 .foregroundStyle(CoupleTheme.ColorToken.secondaryText)
         }
@@ -113,18 +124,20 @@ struct HomeLoadingView: View {
 }
 
 struct HomeErrorView: View {
-    let message: String
+    let error: CoupleClientError
     let retry: () -> Void
+
+    @Environment(\.strings) private var strings
 
     var body: some View {
         VStack(spacing: CoupleTheme.Space.large) {
-            Text("Your shared world is still here.")
+            Text(strings.home.worldStillHere)
                 .font(.system(.title, weight: .medium))
                 .tracking(CoupleTheme.TypeToken.displayTracking)
                 .foregroundStyle(CoupleTheme.ColorToken.pearl)
                 .multilineTextAlignment(.center)
-            InlineMessage(text: message, style: .error)
-            PrimaryButton(title: "Try again", action: retry)
+            InlineMessage(text: strings.errors.couple(error), style: .error)
+            PrimaryButton(title: strings.common.tryAgain, action: retry)
         }
         .frame(maxWidth: CoupleTheme.Size.panel)
     }

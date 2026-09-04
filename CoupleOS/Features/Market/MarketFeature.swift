@@ -19,7 +19,7 @@ nonisolated struct MarketFeature {
         var isAddingItem = false
         var isChangingRun = false
         var isClearingBasket = false
-        var errorMessage: String?
+        var error: MarketClientError?
 
         var items: [MarketItem] { board.items }
 
@@ -82,7 +82,7 @@ nonisolated struct MarketFeature {
         case idle
         case loading
         case ready
-        case error(String)
+        case error(MarketClientError)
     }
 
     enum Action: BindableAction {
@@ -135,7 +135,7 @@ nonisolated struct MarketFeature {
                 state.currentUserID = currentUserID
                 state.partnerID = partnerID
                 state.phase = .loading
-                state.errorMessage = nil
+                state.error = nil
                 return startObservation(coupleID: coupleID, state: &state)
 
             case .stop:
@@ -148,11 +148,11 @@ nonisolated struct MarketFeature {
             case .retryTapped:
                 guard let coupleID = state.coupleID else { return .none }
                 state.phase = .loading
-                state.errorMessage = nil
+                state.error = nil
                 return startObservation(coupleID: coupleID, state: &state)
 
             case .dismissErrorTapped:
-                state.errorMessage = nil
+                state.error = nil
                 return .none
 
             case let .observationEvent(event):
@@ -167,7 +167,7 @@ nonisolated struct MarketFeature {
                     )
                 case let .failure(error):
                     state.observationID = nil
-                    state.phase = .error(error.message)
+                    state.phase = .error(error)
                 }
                 return .none
 
@@ -188,7 +188,7 @@ nonisolated struct MarketFeature {
                     return .none
                 }
                 state.isClearingBasket = true
-                state.errorMessage = nil
+                state.error = nil
                 return .run { send in
                     guard let result = await settled({
                         try await marketClient.clearGathered(coupleID)
@@ -199,7 +199,7 @@ nonisolated struct MarketFeature {
             case let .clearBasketResponse(error):
                 state.isClearingBasket = false
                 if let error {
-                    state.errorMessage = error.message
+                    state.error = error
                 } else {
                     // The listener confirms this too, but dropping them now
                     // keeps the basket from lingering for a whole round trip.
@@ -213,14 +213,14 @@ nonisolated struct MarketFeature {
                 case let .success(item):
                     upsert(item, state: &state)
                 case let .failure(error):
-                    state.errorMessage = error.message
+                    state.error = error
                 }
                 return .none
 
             case let .removeResponse(id, error):
                 state.settlingItemIDs.remove(id)
                 if let error {
-                    state.errorMessage = error.message
+                    state.error = error
                 } else {
                     state.board.items.removeAll { $0.id == id }
                 }
@@ -233,7 +233,7 @@ nonisolated struct MarketFeature {
                     guard run.coupleID == state.coupleID else { return .none }
                     state.board.run = run.isActive ? run : nil
                 case let .failure(error):
-                    state.errorMessage = error.message
+                    state.error = error
                 }
                 return .none
             }
@@ -248,7 +248,7 @@ nonisolated struct MarketFeature {
         let requestID = uuid()
         let isRequest = state.draftIsRequest
         state.isAddingItem = true
-        state.errorMessage = nil
+        state.error = nil
         // Cleared now rather than on success: the field has to be ready for the
         // next thing they remember, which is usually immediately.
         state.draftName = ""
@@ -268,7 +268,7 @@ nonisolated struct MarketFeature {
               !state.settlingItemIDs.contains(id) else { return .none }
         let status: MarketItem.Status = item.isPending ? .gathered : .pending
         state.settlingItemIDs.insert(id)
-        state.errorMessage = nil
+        state.error = nil
 
         return .run { send in
             guard let result = await settled({
@@ -283,7 +283,7 @@ nonisolated struct MarketFeature {
             return .none
         }
         state.settlingItemIDs.insert(id)
-        state.errorMessage = nil
+        state.error = nil
 
         return .run { send in
             guard let result = await settled({
@@ -297,7 +297,7 @@ nonisolated struct MarketFeature {
         guard let coupleID = state.coupleID, !state.isChangingRun else { return .none }
         let run = state.myRun
         state.isChangingRun = true
-        state.errorMessage = nil
+        state.error = nil
         let requestID = uuid()
 
         return .run { send in

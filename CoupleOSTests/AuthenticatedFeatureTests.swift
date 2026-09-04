@@ -144,8 +144,8 @@ final class AuthenticatedFeatureTests: XCTestCase {
             $0.marketClient.observe = { _ in AsyncThrowingStream { $0.finish() } }
             $0.choreClient.observe = { _ in AsyncThrowingStream { $0.finish() } }
             $0.pushNotificationClient.requestAuthorization = { true }
-            $0.pushNotificationClient.registerDevice = { userID in
-                registered.withValue { $0.append(userID) }
+            $0.pushNotificationClient.registerDevice = { userID, language in
+                registered.withValue { $0.append("\(userID)/\(language.tag)") }
             }
         }
         store.exhaustivity = .off
@@ -153,7 +153,39 @@ final class AuthenticatedFeatureTests: XCTestCase {
         await store.send(.task)
         await store.finish()
 
-        XCTAssertEqual(registered.value, [session.user.id])
+        XCTAssertEqual(registered.value, ["\(session.user.id)/en"])
+    }
+
+    /// The device record is the only thing outside the view tree that depends
+    /// on language, so a change has to reach it — otherwise the app switches to
+    /// Portuguese and the notifications keep arriving in English.
+    func testChangingLanguageRewritesTheDeviceRecord() async {
+        let couple = TestFixtures.couple(status: .active)
+        let session = completedSession(coupleID: couple.id)
+        let registered = LockIsolated<[String]>([])
+        let store = TestStore(
+            initialState: AuthenticatedFeature.State(session: session, couple: couple)
+        ) {
+            AuthenticatedFeature()
+        } withDependencies: {
+            $0.uuid = .constant(self.observationID)
+            $0.pushNotificationClient.requestAuthorization = { true }
+            $0.pushNotificationClient.registerDevice = { _, language in
+                registered.withValue { $0.append(language.tag) }
+            }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.languageChanged(.portugueseBrazil)) {
+            $0.language = .portugueseBrazil
+        }
+        await store.finish()
+        XCTAssertEqual(registered.value, ["pt-BR"])
+
+        // Being told the language it already speaks costs nothing.
+        await store.send(.languageChanged(.portugueseBrazil))
+        await store.finish()
+        XCTAssertEqual(registered.value, ["pt-BR"])
     }
 
     func testRefusedPermissionNeverStoresADevice() async {
@@ -174,7 +206,7 @@ final class AuthenticatedFeatureTests: XCTestCase {
             $0.marketClient.observe = { _ in AsyncThrowingStream { $0.finish() } }
             $0.choreClient.observe = { _ in AsyncThrowingStream { $0.finish() } }
             $0.pushNotificationClient.requestAuthorization = { false }
-            $0.pushNotificationClient.registerDevice = { _ in
+            $0.pushNotificationClient.registerDevice = { _, _ in
                 XCTFail("A refused prompt must not store a device.")
             }
         }
