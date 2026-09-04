@@ -1,0 +1,156 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function isCoupleMember(coupleId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/couples/$(coupleId))
+        && request.auth.uid in get(/databases/$(database)/documents/couples/$(coupleId)).data.memberIds;
+    }
+
+    function sharesActiveCoupleWith(userId) {
+      let requester = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      let partner = get(/databases/$(database)/documents/users/$(userId));
+      let coupleId = requester.data.activeCoupleId;
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && exists(/databases/$(database)/documents/users/$(userId))
+        && coupleId is string
+        && partner.data.activeCoupleId == coupleId
+        && request.auth.uid in get(/databases/$(database)/documents/couples/$(coupleId)).data.memberIds
+        && userId in get(/databases/$(database)/documents/couples/$(coupleId)).data.memberIds;
+    }
+
+    function hasValidStatus() {
+      return request.resource.data.onboardingStatus in [
+        'profileIncomplete',
+        'readyForPartner',
+        'completed'
+      ];
+    }
+
+    function hasValidUserSchema() {
+      return request.resource.data.keys().hasOnly([
+          'firstName',
+          'createdAt',
+          'onboardingStatus',
+          'activeCoupleId'
+        ])
+        && request.resource.data.keys().hasAll([
+          'firstName',
+          'createdAt',
+          'onboardingStatus'
+        ])
+        && request.resource.data.firstName is string
+        && request.resource.data.firstName.size() > 0
+        && hasValidStatus()
+        && (!request.resource.data.keys().hasAny(['activeCoupleId'])
+          || request.resource.data.activeCoupleId is string);
+    }
+
+    function canChangeOnboardingLocally() {
+      return request.resource.data.onboardingStatus == resource.data.onboardingStatus
+        || (resource.data.onboardingStatus == 'profileIncomplete'
+          && request.resource.data.onboardingStatus == 'readyForPartner');
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || sharesActiveCoupleWith(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId)
+        && !request.resource.data.keys().hasAny(['activeCoupleId'])
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.onboardingStatus != 'completed'
+        && hasValidUserSchema();
+
+      allow update: if isOwner(userId)
+        && hasValidUserSchema()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'firstName',
+          'onboardingStatus',
+          'email'
+        ])
+        && request.resource.data.createdAt == resource.data.createdAt
+        && canChangeOnboardingLocally();
+
+      allow delete: if false;
+    }
+
+    // One document per install, holding that install's current FCM token. Only
+    // the owner can see or change their devices; the backend reads them with
+    // admin credentials to deliver a partner's notification.
+    match /users/{userId}/devices/{deviceId} {
+      allow get, list: if isOwner(userId);
+
+      allow create, update: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['token', 'platform', 'updatedAt'])
+        && request.resource.data.token is string
+        && request.resource.data.token.size() > 0
+        && request.resource.data.token.size() <= 4096
+        && request.resource.data.platform == 'ios'
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete: if isOwner(userId);
+    }
+
+    match /couples/{coupleId} {
+      allow read: if request.auth != null
+        && request.auth.uid in resource.data.memberIds;
+      allow create, update, delete: if false;
+    }
+
+    match /invites/{inviteId} {
+      allow read, write: if false;
+    }
+
+    match /couples/{coupleId}/daily/{experienceId} {
+      allow read: if request.auth != null
+        && request.auth.uid in get(/databases/$(database)/documents/couples/$(coupleId)).data.memberIds;
+      allow write: if false;
+      match /answers/{userId} {
+        allow read, write: if false;
+      }
+    }
+
+    match /couples/{coupleId}/decisions/{decisionId} {
+      allow read: if isCoupleMember(coupleId);
+      allow create, update, delete: if false;
+    }
+
+    // The list and the run are written only by callables, which is what lets
+    // the backend be the single place that decides who gets told what.
+    match /couples/{coupleId}/marketItems/{itemId} {
+      allow read: if isCoupleMember(coupleId);
+      allow create, update, delete: if false;
+    }
+
+    match /couples/{coupleId}/marketRuns/{runId} {
+      allow read: if isCoupleMember(coupleId);
+      allow create, update, delete: if false;
+    }
+
+    // What the Couple already bought. Kept out of the live list so that query
+    // never grows, and readable so a past trip can still be looked up.
+    match /couples/{coupleId}/marketHistory/{itemId} {
+      allow read: if isCoupleMember(coupleId);
+      allow create, update, delete: if false;
+    }
+
+    // Whose turn it is is decided in a transaction on the server; a client that
+    // could write here could give itself the easy half of the housework.
+    match /couples/{coupleId}/chores/{choreId} {
+      allow read: if isCoupleMember(coupleId);
+      allow create, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

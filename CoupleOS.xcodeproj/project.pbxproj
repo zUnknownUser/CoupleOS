@@ -6,8 +6,28 @@
 	objectVersion = 110;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A069ACC0304618120086AA5C /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = A069ACC2304618120086AA5C /* ComposableArchitecture */; };
+		F10000000000000000000004 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = F10000000000000000000002 /* FirebaseAuth */; };
+		F10000000000000000000005 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = F10000000000000000000003 /* FirebaseFirestore */; };
+		F10000000000000000000006 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = F10000000000000000000007 /* FirebaseFunctions */; };
+		F10000000000000000000008 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = F10000000000000000000009 /* FirebaseMessaging */; };
+		F10000000000000000000012 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = F10000000000000000000011 /* FirebaseAppCheck */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		F20000000000000000000010 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A069AC9E304618110086AA5C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A069ACA5304618110086AA5C;
+			remoteInfo = CoupleOS;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		A069ACA6304618110086AA5C /* CoupleOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CoupleOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F20000000000000000000001 /* CoupleOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CoupleOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +36,26 @@
 			path = CoupleOS;
 			sourceTree = "<group>";
 		};
+		F20000000000000000000002 /* CoupleOSTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CoupleOSTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A069ACA3304618110086AA5C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				A069ACC0304618120086AA5C /* ComposableArchitecture in Frameworks */,
+				F10000000000000000000004 /* FirebaseAuth in Frameworks */,
+				F10000000000000000000005 /* FirebaseFirestore in Frameworks */,
+				F10000000000000000000006 /* FirebaseFunctions in Frameworks */,
+				F10000000000000000000008 /* FirebaseMessaging in Frameworks */,
+				F10000000000000000000012 /* FirebaseAppCheck in Frameworks */,
+			);
+		};
+		F20000000000000000000003 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
 			);
@@ -31,6 +67,7 @@
 			isa = PBXGroup;
 			children = (
 				A069ACA8304618110086AA5C /* CoupleOS */,
+				F20000000000000000000002 /* CoupleOSTests */,
 				A069ACA7304618110086AA5C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -39,6 +76,7 @@
 			isa = PBXGroup;
 			children = (
 				A069ACA6304618110086AA5C /* CoupleOS.app */,
+				F20000000000000000000001 /* CoupleOSTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -60,9 +98,38 @@
 				A069ACA8304618110086AA5C /* CoupleOS */,
 			);
 			name = CoupleOS;
+			packageProductDependencies = (
+				A069ACC2304618120086AA5C /* ComposableArchitecture */,
+				F10000000000000000000002 /* FirebaseAuth */,
+				F10000000000000000000003 /* FirebaseFirestore */,
+				F10000000000000000000007 /* FirebaseFunctions */,
+				F10000000000000000000009 /* FirebaseMessaging */,
+				F10000000000000000000011 /* FirebaseAppCheck */,
+			);
 			productName = CoupleOS;
 			productReference = A069ACA6304618110086AA5C /* CoupleOS.app */;
 			productType = "com.apple.product-type.application";
+		};
+		F20000000000000000000006 /* CoupleOSTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F20000000000000000000007 /* Build configuration list for PBXNativeTarget "CoupleOSTests" */;
+			buildPhases = (
+				F20000000000000000000004 /* Sources */,
+				F20000000000000000000003 /* Frameworks */,
+				F20000000000000000000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F20000000000000000000011 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F20000000000000000000002 /* CoupleOSTests */,
+			);
+			name = CoupleOSTests;
+			productName = CoupleOSTests;
+			productReference = F20000000000000000000001 /* CoupleOSTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -77,6 +144,10 @@
 					A069ACA5304618110086AA5C = {
 						CreatedOnToolsVersion = 27.0;
 					};
+					F20000000000000000000006 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = A069ACA5304618110086AA5C;
+					};
 				};
 			};
 			buildConfigurationList = A069ACA1304618110086AA5C /* Build configuration list for PBXProject "CoupleOS" */;
@@ -88,18 +159,28 @@
 			);
 			mainGroup = A069AC9D304618110086AA5C;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A069ACC1304618120086AA5C /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
+				F10000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A069ACA7304618110086AA5C /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				A069ACA5304618110086AA5C /* CoupleOS */,
+				F20000000000000000000006 /* CoupleOSTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A069ACA4304618110086AA5C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		F20000000000000000000005 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -112,7 +193,20 @@
 			files = (
 			);
 		};
+		F20000000000000000000004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F20000000000000000000011 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A069ACA5304618110086AA5C /* CoupleOS */;
+			targetProxy = F20000000000000000000010 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A069ACB1304618120086AA5C /* Debug configuration for PBXProject "CoupleOS" */ = {
@@ -241,11 +335,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CoupleOS/CoupleOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				COUPLE_INVITE_HOST = "coupleos-lc7.web.app";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 5RS2AA677K;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_COUPLE_INVITE_BASE_URL = "https://$(COUPLE_INVITE_HOST)";
+				INFOPLIST_KEY_FirebaseAppDelegateProxyEnabled = NO;
+				INFOPLIST_KEY_FirebaseMessagingInstallationIdEnabled = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -273,11 +372,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CoupleOS/CoupleOS.entitlements;
 				CODE_SIGN_STYLE = Automatic;
+				COUPLE_INVITE_HOST = "coupleos-lc7.web.app";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 5RS2AA677K;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_COUPLE_INVITE_BASE_URL = "https://$(COUPLE_INVITE_HOST)";
+				INFOPLIST_KEY_FirebaseAppDelegateProxyEnabled = NO;
+				INFOPLIST_KEY_FirebaseMessagingInstallationIdEnabled = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -300,6 +404,42 @@
 			};
 			name = Release;
 		};
+		F20000000000000000000008 /* Debug configuration for PBXNativeTarget "CoupleOSTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 5RS2AA677K;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.NexusSoft.CoupleOSTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CoupleOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CoupleOS";
+			};
+			name = Debug;
+		};
+		F20000000000000000000009 /* Release configuration for PBXNativeTarget "CoupleOSTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 5RS2AA677K;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.NexusSoft.CoupleOSTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CoupleOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CoupleOS";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -319,7 +459,67 @@
 			);
 			defaultConfigurationName = Release;
 		};
+		F20000000000000000000007 /* Build configuration list for PBXNativeTarget "CoupleOSTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F20000000000000000000008 /* Debug configuration for PBXNativeTarget "CoupleOSTests" */,
+				F20000000000000000000009 /* Release configuration for PBXNativeTarget "CoupleOSTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A069ACC1304618120086AA5C /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.26.1;
+			};
+		};
+		F10000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.14.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A069ACC2304618120086AA5C /* ComposableArchitecture */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A069ACC1304618120086AA5C /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
+			productName = ComposableArchitecture;
+		};
+		F10000000000000000000002 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		F10000000000000000000003 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		F10000000000000000000007 /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
+		F10000000000000000000009 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+		F10000000000000000000011 /* FirebaseAppCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F10000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAppCheck;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A069AC9E304618110086AA5C /* Project object */;
 	validationLevel = 1;
